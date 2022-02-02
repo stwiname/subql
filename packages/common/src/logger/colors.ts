@@ -1,11 +1,11 @@
 // Copyright 2020-2022 OnFinality Limited authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import chalk from 'chalk';
+import {Chalk, ChalkInstance} from 'chalk';
 import {LEVELS} from './constants';
 
-export const ctx = new chalk.Instance({level: 3});
-const colored: Record<keyof typeof LEVELS | 'message', chalk.Chalk> = {
+export const ctx = new Chalk({level: 3});
+const colored: Record<keyof typeof LEVELS | 'message', ChalkInstance> = {
   default: ctx.white,
   60: ctx.bgRed,
   50: ctx.red,
