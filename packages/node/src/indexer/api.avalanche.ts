@@ -6,7 +6,7 @@ import { IndexAPI } from 'avalanche/dist/apis/index';
 import { GetContainerByIndexResponse } from 'avalanche/dist/apis/index/interfaces';
 import { AvalancheOptions, ApiWrapper } from './types';
 
-export class AlgorandApi implements ApiWrapper {
+export class AvalancheApi implements ApiWrapper {
   private client: Avalanche;
   private indexApi: IndexAPI;
   private genesisBlock: GetContainerByIndexResponse;
