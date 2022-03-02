@@ -72,7 +72,6 @@ export class ApiService implements OnApplicationShutdown {
           );
           logger.error(err, err.message);
           throw err;
-          break;
         }
       }
 
