@@ -7,6 +7,7 @@ import { BlockHash } from '@polkadot/types/interfaces';
 import { SubqueryProject } from '../configure/SubqueryProject';
 import { getLogger } from '../utils/logger';
 import { AlgorandApi } from './api.algorand';
+import { AvalancheApi } from './api.avalanche';
 import { SubstrateApi } from './api.substrate';
 import { NetworkMetadataPayload } from './events';
 import { ApiAt, ApiWrapper } from './types';
@@ -42,15 +43,37 @@ export class ApiService implements OnApplicationShutdown {
       }
       logger.info(JSON.stringify(this.project.network));
 
-      if (network.type === 'substrate') {
-        // TODO: Find another way to identify chain
-        this.api = new SubstrateApi(network, chainTypes, this.eventEmitter);
-      } else if (network.type === 'algorand') {
-        this.api = new AlgorandApi({
-          token: network.token,
-          server: network.endpoint,
-          port: network.port,
-        });
+      switch (network.type) {
+        case 'substrate': {
+          this.api = new SubstrateApi(network, chainTypes, this.eventEmitter);
+          break;
+        }
+        case 'algorand': {
+          this.api = new AlgorandApi({
+            token: network.token,
+            server: network.endpoint,
+            port: network.port,
+          });
+          break;
+        }
+        case 'avalanche': {
+          this.api = new AvalancheApi({
+            ip: network.endpoint,
+            port: network.port,
+            protocol: network.protocol,
+            networkID: network.networkID,
+            chainName: network.chainName,
+          });
+          break;
+        }
+        default: {
+          const err = new Error(
+            `Network type doesn't match any of our supported networks. supported: { substrate, algorand, avalanche } actual="${network.type}`,
+          );
+          logger.error(err, err.message);
+          throw err;
+          break;
+        }
       }
 
       await this.api.init();
