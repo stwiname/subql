@@ -52,7 +52,7 @@ export type AvalancheOptions = {
   port: number;
   protocol: string;
   networkID: number;
-  chainName: string;
+  chainName: string; // X | C | P
 };
 
 /****************************************************/
