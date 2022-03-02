@@ -19,4 +19,7 @@ export interface ProjectNetworkConfig {
   type?: string;
   token?: string;
   port?: string;
+  protocol?: string;
+  networkID?: number;
+  chainName?: string;
 }
