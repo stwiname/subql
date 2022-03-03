@@ -74,10 +74,10 @@ export class AlgorandBlockWrapped implements BlockWrapper {
   }
 
   getBlockHeight(): number {
-    return 1;
+    return this.block.rnd;
   }
 
   getHash(): string {
-    return '1';
+    return '1'; // TODO
   }
 }
