@@ -15,11 +15,16 @@ import {
   RegisteredTypes,
 } from '@polkadot/types/types';
 import { ProjectNetworkConfig } from '@subql/common';
+import { SubstrateBlock } from '@subql/types';
+import {
+  SubstrateExtrinsic,
+  SubstrateEvent,
+} from '../../../types/dist/interfaces';
 import { profilerWrap } from '../utils/profiler';
 import * as SubstrateUtil from '../utils/substrate';
 import { getYargsOption } from '../yargs';
 import { IndexerEvent } from './events';
-import { ApiAt, BlockContent, ApiWrapper } from './types';
+import { ApiAt, ApiWrapper, BlockWrapper, BlockContent } from './types';
 
 const NOT_SUPPORT = (name: string) => () => {
   throw new Error(`${name}() is not supported`);
@@ -99,7 +104,7 @@ export class SubstrateApi implements ApiWrapper {
   async fetchBlocksBatches(
     bufferBlocks: number[],
     overallSpecNumber?: number,
-  ): Promise<BlockContent[]> {
+  ): Promise<BlockWrapper[]> {
     const { argv } = getYargsOption();
 
     const fetchBlocksBatchesUtil = argv.profiler
@@ -113,7 +118,10 @@ export class SubstrateApi implements ApiWrapper {
       bufferBlocks,
       overallSpecNumber,
     );
-    return blocksContent;
+    const blocks = blocksContent.map(
+      (b: BlockContent) => new SubstrateBlockWrapped(b),
+    );
+    return blocks;
   }
 
   /****************************************************/
@@ -216,5 +224,41 @@ export class SubstrateApi implements ApiWrapper {
     const ext = original.meta as unknown as DefinitionRpcExt;
 
     return `api.rpc.${ext?.section ?? '*'}.${ext?.method ?? '*'}`;
+  }
+}
+
+export class SubstrateBlockWrapped implements BlockWrapper {
+  constructor(private block: BlockContent) {}
+
+  setBlock(block: BlockContent): void {
+    this.block = block as BlockContent;
+  }
+
+  getBlock(): SubstrateBlock {
+    return this.block.block;
+  }
+
+  getBlockHeight(): number {
+    return this.block.block.block.header.number.toNumber();
+  }
+
+  getHash(): string {
+    return this.block.block.block.header.hash.toHex();
+  }
+
+  /****************************************************/
+  /*           SUBSTRATE SPECIFIC METHODS             */
+  /****************************************************/
+
+  getExtrinsincs(): SubstrateExtrinsic[] {
+    return this.block.extrinsics;
+  }
+
+  getEvents(): SubstrateEvent[] {
+    return this.block.events;
+  }
+
+  getBlockContent(): BlockContent {
+    return this.block;
   }
 }

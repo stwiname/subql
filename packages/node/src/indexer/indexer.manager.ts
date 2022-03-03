@@ -32,7 +32,7 @@ import { profiler } from '../utils/profiler';
 import * as SubstrateUtil from '../utils/substrate';
 import { getYargsOption } from '../yargs';
 import { ApiService } from './api.service';
-import { SubstrateApi } from './api.substrate';
+import { SubstrateApi, SubstrateBlockWrapped } from './api.substrate';
 import { DsProcessorService } from './ds-processor.service';
 import { DynamicDsService } from './dynamic-ds.service';
 import { MetadataFactory, MetadataRepo } from './entities/Metadata.entity';
@@ -43,7 +43,7 @@ import { PoiService } from './poi.service';
 import { PoiBlock } from './PoiBlock';
 import { IndexerSandbox, SandboxService } from './sandbox.service';
 import { StoreService } from './store.service';
-import { ApiAt, BlockContent, ApiWrapper } from './types';
+import { ApiAt, BlockContent, ApiWrapper, BlockWrapper } from './types';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { version: packageVersion } = require('../../package.json');
@@ -110,9 +110,9 @@ export class IndexerManager {
   }
 
   @profiler(argv.profiler)
-  async indexBlock(blockContent: BlockContent): Promise<void> {
-    const { block } = blockContent;
-    const blockHeight = block.block.header.number.toNumber();
+  async indexBlock(blockContent: BlockWrapper): Promise<void> {
+    const block = blockContent.getBlock();
+    const blockHeight = blockContent.getBlockHeight();
     this.eventEmitter.emit(IndexerEvent.BlockProcessing, {
       height: blockHeight,
       timestamp: Date.now(),
@@ -121,54 +121,71 @@ export class IndexerManager {
     this.storeService.setTransaction(tx);
 
     let poiBlockHash: Uint8Array;
-    try {
-      const isUpgraded = block.specVersion !== this.prevSpecVersion;
-      // if parentBlockHash injected, which means we need to check runtime upgrade
-      const apiAt = await this.apiService.getPatchedApi(
-        block.block.hash,
-        block.block.header.number.unwrap().toNumber(),
-        isUpgraded ? block.block.header.parentHash : undefined,
-      );
+    if (this.project.network.type === 'substrate') {
+      try {
+        const isUpgraded = block.specVersion !== this.prevSpecVersion;
+        const substrateBlockContent = (
+          blockContent as SubstrateBlockWrapped
+        ).getBlockContent();
+        // if parentBlockHash injected, which means we need to check runtime upgrade
+        const apiAt = await this.apiService.getPatchedApi(
+          block.block.hash,
+          block.block.header.number.unwrap().toNumber(),
+          isUpgraded ? block.block.header.parentHash : undefined,
+        );
 
-      // Run predefined data sources
-      for (const ds of this.filteredDataSources) {
-        await this.indexBlockForDs(ds, blockContent, apiAt, blockHeight, tx);
-      }
-
-      // Run dynamic data sources, must be after predefined datasources
-      // FIXME if any new dynamic datasources are created here they wont be run for the current block
-      for (const ds of await this.dynamicDsService.getDynamicDatasources()) {
-        await this.indexBlockForDs(ds, blockContent, apiAt, blockHeight, tx);
-      }
-
-      await this.storeService.setMetadataBatch(
-        [
-          { key: 'lastProcessedHeight', value: blockHeight },
-          { key: 'lastProcessedTimestamp', value: Date.now() },
-        ],
-        { transaction: tx },
-      );
-      if (this.nodeConfig.proofOfIndex) {
-        const operationHash = this.storeService.getOperationMerkleRoot();
-        //check if operation is null, then poi will not be insert
-        if (!u8aEq(operationHash, NULL_MERKEL_ROOT)) {
-          const poiBlock = PoiBlock.create(
+        // Run predefined data sources
+        for (const ds of this.filteredDataSources) {
+          await this.indexBlockForDs(
+            ds,
+            substrateBlockContent,
+            apiAt,
             blockHeight,
-            block.block.header.hash.toHex(),
-            operationHash,
-            await this.poiService.getLatestPoiBlockHash(),
-            this.project.id,
+            tx,
           );
-          poiBlockHash = poiBlock.hash;
-          await this.storeService.setPoi(poiBlock, { transaction: tx });
         }
+
+        // Run dynamic data sources, must be after predefined datasources
+        // FIXME if any new dynamic datasources are created here they wont be run for the current block
+        for (const ds of await this.dynamicDsService.getDynamicDatasources()) {
+          await this.indexBlockForDs(
+            ds,
+            substrateBlockContent,
+            apiAt,
+            blockHeight,
+            tx,
+          );
+        }
+
+        await this.storeService.setMetadataBatch(
+          [
+            { key: 'lastProcessedHeight', value: blockHeight },
+            { key: 'lastProcessedTimestamp', value: Date.now() },
+          ],
+          { transaction: tx },
+        );
+        if (this.nodeConfig.proofOfIndex) {
+          const operationHash = this.storeService.getOperationMerkleRoot();
+          //check if operation is null, then poi will not be insert
+          if (!u8aEq(operationHash, NULL_MERKEL_ROOT)) {
+            const poiBlock = PoiBlock.create(
+              blockHeight,
+              blockContent.getHash(),
+              operationHash,
+              await this.poiService.getLatestPoiBlockHash(),
+              this.project.id,
+            );
+            poiBlockHash = poiBlock.hash;
+            await this.storeService.setPoi(poiBlock, { transaction: tx });
+          }
+        }
+      } catch (e) {
+        await tx.rollback();
+        throw e;
       }
-    } catch (e) {
-      await tx.rollback();
-      throw e;
     }
     await tx.commit();
-    this.fetchService.latestProcessed(block.block.header.number.toNumber());
+    this.fetchService.latestProcessed(blockContent.getBlockHeight());
     this.prevSpecVersion = block.specVersion;
     if (this.nodeConfig.proofOfIndex) {
       this.poiService.setLatestPoiBlockHash(poiBlockHash);

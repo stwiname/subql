@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import algosdk from 'algosdk';
-import { AlgorandBlock, AlgorandOptions, ApiWrapper } from './types';
+import {
+  AlgorandBlock,
+  AlgorandOptions,
+  ApiWrapper,
+  BlockWrapper,
+} from './types';
 
 export class AlgorandApi implements ApiWrapper {
   private lastHeader: any;
@@ -47,11 +52,32 @@ export class AlgorandApi implements ApiWrapper {
     return lastHeight;
   }
 
-  async fetchBlocksBatches(bufferBlocks: number[]): Promise<AlgorandBlock[]> {
+  async fetchBlocksBatches(bufferBlocks: number[]): Promise<BlockWrapper[]> {
     return Promise.all(
       bufferBlocks.map(
-        async (round) => (await this.client.block(round).do()).block,
+        async (round) =>
+          new AlgorandBlockWrapped((await this.client.block(round).do()).block),
       ),
     );
+  }
+}
+
+export class AlgorandBlockWrapped implements BlockWrapper {
+  constructor(private block: AlgorandBlock) {}
+
+  setBlock(block: AlgorandBlock): void {
+    this.block = block as AlgorandBlock;
+  }
+
+  getBlock(): AlgorandBlock {
+    return this.block;
+  }
+
+  getBlockHeight(): number {
+    return 1;
+  }
+
+  getHash(): string {
+    return '1';
   }
 }

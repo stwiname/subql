@@ -13,6 +13,13 @@ import algosdk from 'algosdk';
 
 export type ApiAt = ApiDecoration<'promise'> & { rpc: ApiPromise['rpc'] };
 
+export interface BlockWrapper {
+  setBlock: (block: BlockContent | AlgorandBlock) => void;
+  getBlock: () => SubstrateBlock | AlgorandBlock;
+  getBlockHeight: () => number;
+  getHash: () => string;
+}
+
 export interface ApiWrapper {
   init: () => Promise<void>;
   getGenesisHash: () => string;
@@ -23,7 +30,7 @@ export interface ApiWrapper {
   fetchBlocksBatches: (
     bufferBlocks: number[],
     overallSpecNumber?: number,
-  ) => Promise<AlgorandBlock[] | BlockContent[]>;
+  ) => Promise<BlockWrapper[]>;
 }
 
 /****************************************************/
