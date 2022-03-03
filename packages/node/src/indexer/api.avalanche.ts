@@ -1,7 +1,7 @@
 // Copyright 2020-2022 OnFinality Limited authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { Avalanche } from 'avalanche';
+import { Avalanche, BinTools } from 'avalanche';
 import { IndexAPI } from 'avalanche/dist/apis/index';
 import { GetContainerByIndexResponse } from 'avalanche/dist/apis/index/interfaces';
 import { AvalancheOptions, ApiWrapper } from './types';
@@ -11,6 +11,7 @@ export class AvalancheApi implements ApiWrapper {
   private indexApi: IndexAPI;
   private genesisBlock: GetContainerByIndexResponse;
   private encoding: string;
+  private bintools: BinTools;
 
   constructor(private options: AvalancheOptions) {
     this.encoding = 'cb58';
@@ -21,6 +22,7 @@ export class AvalancheApi implements ApiWrapper {
       this.options.networkID,
     );
     this.indexApi = this.client.Index();
+    this.bintools = BinTools.getInstance();
   }
 
   async init(): Promise<void> {
@@ -50,6 +52,7 @@ export class AvalancheApi implements ApiWrapper {
       this.encoding,
       baseurl,
     );
+    const decrypted = this.bintools.cb58Decode(lastAccepted.bytes);
     const finalizedBlockHeight = 10;
     return finalizedBlockHeight;
   }
@@ -60,6 +63,7 @@ export class AvalancheApi implements ApiWrapper {
       this.encoding,
       baseurl,
     );
+    const decrypted = this.bintools.cb58Decode(lastAccepted.bytes);
     const lastHeight = 10;
     return lastHeight;
   }
@@ -70,6 +74,7 @@ export class AvalancheApi implements ApiWrapper {
       this.encoding,
       baseurl,
     );
+    const decrypted = this.bintools.cb58Decode(lastAccepted.bytes);
     return this.genesisBlock.bytes;
   }
 }
