@@ -43,7 +43,7 @@ import { PoiService } from './poi.service';
 import { PoiBlock } from './PoiBlock';
 import { IndexerSandbox, SandboxService } from './sandbox.service';
 import { StoreService } from './store.service';
-import { ApiAt, BlockContent, ApiWrapper, BlockWrapper } from './types';
+import { ApiAt, ApiWrapper, BlockWrapper } from './types';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { version: packageVersion } = require('../../package.json');
@@ -79,7 +79,7 @@ export class IndexerManager {
 
   async indexBlockForDs(
     ds: SubqlProjectDs,
-    blockContent: BlockContent,
+    blockContent: BlockWrapper,
     apiAt: ApiAt,
     blockHeight: number,
     tx: Transaction,
@@ -124,9 +124,6 @@ export class IndexerManager {
     if (this.project.network.type === 'substrate') {
       try {
         const isUpgraded = block.specVersion !== this.prevSpecVersion;
-        const substrateBlockContent = (
-          blockContent as SubstrateBlockWrapped
-        ).getBlockContent();
         // if parentBlockHash injected, which means we need to check runtime upgrade
         const apiAt = await this.apiService.getPatchedApi(
           block.block.hash,
@@ -138,7 +135,7 @@ export class IndexerManager {
         for (const ds of this.filteredDataSources) {
           await this.indexBlockForDs(
             ds,
-            substrateBlockContent,
+            blockContent as SubstrateBlockWrapped,
             apiAt,
             blockHeight,
             tx,
@@ -150,7 +147,7 @@ export class IndexerManager {
         for (const ds of await this.dynamicDsService.getDynamicDatasources()) {
           await this.indexBlockForDs(
             ds,
-            substrateBlockContent,
+            blockContent as SubstrateBlockWrapped,
             apiAt,
             blockHeight,
             tx,
@@ -478,36 +475,42 @@ export class IndexerManager {
   private async indexBlockForRuntimeDs(
     vm: IndexerSandbox,
     handlers: SubqlRuntimeHandler[],
-    { block, events, extrinsics }: BlockContent,
+    blockContent: BlockWrapper,
   ): Promise<void> {
-    for (const handler of handlers) {
-      switch (handler.kind) {
-        case SubqlHandlerKind.Block:
-          if (SubstrateUtil.filterBlock(block, handler.filter)) {
-            await vm.securedExec(handler.handler, [block]);
+    if (this.project.network.type === 'substrate') {
+      const substrateBlockContent = blockContent as SubstrateBlockWrapped;
+      const block = substrateBlockContent.getBlock();
+      const extrinsics = substrateBlockContent.getExtrinsincs();
+      const events = substrateBlockContent.getEvents();
+      for (const handler of handlers) {
+        switch (handler.kind) {
+          case SubqlHandlerKind.Block:
+            if (SubstrateUtil.filterBlock(block, handler.filter)) {
+              await vm.securedExec(handler.handler, [block]);
+            }
+            break;
+          case SubqlHandlerKind.Call: {
+            const filteredExtrinsics = SubstrateUtil.filterExtrinsics(
+              extrinsics,
+              handler.filter,
+            );
+            for (const e of filteredExtrinsics) {
+              await vm.securedExec(handler.handler, [e]);
+            }
+            break;
           }
-          break;
-        case SubqlHandlerKind.Call: {
-          const filteredExtrinsics = SubstrateUtil.filterExtrinsics(
-            extrinsics,
-            handler.filter,
-          );
-          for (const e of filteredExtrinsics) {
-            await vm.securedExec(handler.handler, [e]);
+          case SubqlHandlerKind.Event: {
+            const filteredEvents = SubstrateUtil.filterEvents(
+              events,
+              handler.filter,
+            );
+            for (const e of filteredEvents) {
+              await vm.securedExec(handler.handler, [e]);
+            }
+            break;
           }
-          break;
+          default:
         }
-        case SubqlHandlerKind.Event: {
-          const filteredEvents = SubstrateUtil.filterEvents(
-            events,
-            handler.filter,
-          );
-          for (const e of filteredEvents) {
-            await vm.securedExec(handler.handler, [e]);
-          }
-          break;
-        }
-        default:
       }
     }
   }
@@ -515,49 +518,54 @@ export class IndexerManager {
   private async indexBlockForCustomDs(
     ds: SubqlCustomDatasource<string, SubqlNetworkFilter>,
     vm: IndexerSandbox,
-    { block, events, extrinsics }: BlockContent,
+    blockContent: BlockWrapper,
   ): Promise<void> {
-    const plugin = this.dsProcessorService.getDsProcessor(ds);
-    const assets = await this.dsProcessorService.getAssets(ds);
+    if (this.project.network.type === 'substrate') {
+      const substrateBlockContent = blockContent as SubstrateBlockWrapped;
+      const block = substrateBlockContent.getBlock();
+      const extrinsics = substrateBlockContent.getExtrinsincs();
+      const events = substrateBlockContent.getEvents();
+      const plugin = this.dsProcessorService.getDsProcessor(ds);
+      const assets = await this.dsProcessorService.getAssets(ds);
 
-    const processData = async <K extends SubqlHandlerKind>(
-      processor: SecondLayerHandlerProcessor<K, unknown, unknown>,
-      handler: SubqlCustomHandler<string, Record<string, unknown>>,
-      filteredData: RuntimeHandlerInputMap[K][],
-    ): Promise<void> => {
-      if (this.project.network.type !== 'substrate') {
-        return null;
-      }
-      const substrateApi = this.api as SubstrateApi;
-      const transformedData = await Promise.all(
-        filteredData
-          .filter((data) => processor.filterProcessor(handler.filter, data, ds))
-          .map((data) =>
-            processor.transformer(data, ds, substrateApi.getClient(), assets),
-          ),
-      );
-
-      for (const data of transformedData) {
-        await vm.securedExec(handler.handler, [data]);
-      }
-    };
-
-    for (const handler of ds.mapping.handlers) {
-      const processor = plugin.handlerProcessors[handler.kind];
-      if (isBlockHandlerProcessor(processor)) {
-        await processData(processor, handler, [block]);
-      } else if (isCallHandlerProcessor(processor)) {
-        const filteredExtrinsics = SubstrateUtil.filterExtrinsics(
-          extrinsics,
-          processor.baseFilter,
+      const processData = async <K extends SubqlHandlerKind>(
+        processor: SecondLayerHandlerProcessor<K, unknown, unknown>,
+        handler: SubqlCustomHandler<string, Record<string, unknown>>,
+        filteredData: RuntimeHandlerInputMap[K][],
+      ): Promise<void> => {
+        const substrateApi = this.api as SubstrateApi;
+        const transformedData = await Promise.all(
+          filteredData
+            .filter((data) =>
+              processor.filterProcessor(handler.filter, data, ds),
+            )
+            .map((data) =>
+              processor.transformer(data, ds, substrateApi.getClient(), assets),
+            ),
         );
-        await processData(processor, handler, filteredExtrinsics);
-      } else if (isEventHandlerProcessor(processor)) {
-        const filteredEvents = SubstrateUtil.filterEvents(
-          events,
-          processor.baseFilter,
-        );
-        await processData(processor, handler, filteredEvents);
+
+        for (const data of transformedData) {
+          await vm.securedExec(handler.handler, [data]);
+        }
+      };
+
+      for (const handler of ds.mapping.handlers) {
+        const processor = plugin.handlerProcessors[handler.kind];
+        if (isBlockHandlerProcessor(processor)) {
+          await processData(processor, handler, [block]);
+        } else if (isCallHandlerProcessor(processor)) {
+          const filteredExtrinsics = SubstrateUtil.filterExtrinsics(
+            extrinsics,
+            processor.baseFilter,
+          );
+          await processData(processor, handler, filteredExtrinsics);
+        } else if (isEventHandlerProcessor(processor)) {
+          const filteredEvents = SubstrateUtil.filterEvents(
+            events,
+            processor.baseFilter,
+          );
+          await processData(processor, handler, filteredEvents);
+        }
       }
     }
   }

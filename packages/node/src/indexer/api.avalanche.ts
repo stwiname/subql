@@ -68,7 +68,7 @@ export class AvalancheApi implements ApiWrapper {
     return lastHeight;
   }
 
-  async fetchBlocksBatches(bufferBlocks: number[]): Promise<any> {
+  async fetchBlocks(bufferBlocks: number[]): Promise<any> {
     const baseurl = '/ext/index/C/block';
     const lastAccepted = await this.indexApi.getLastAccepted(
       this.encoding,

@@ -24,13 +24,10 @@ import { isUndefined, range, sortBy, uniqBy } from 'lodash';
 import { NodeConfig } from '../configure/NodeConfig';
 import { SubqueryProject } from '../configure/SubqueryProject';
 import { getLogger } from '../utils/logger';
-import { profiler } from '../utils/profiler';
 import { isBaseHandler, isCustomHandler } from '../utils/project';
 import { delay } from '../utils/promise';
-import * as SubstrateUtil from '../utils/substrate';
 import { getYargsOption } from '../yargs';
 import { ApiService } from './api.service';
-import { SubstrateApi } from './api.substrate';
 import { BlockedQueue } from './BlockedQueue';
 import { Dictionary, DictionaryService } from './dictionary.service';
 import { DsProcessorService } from './ds-processor.service';
@@ -109,7 +106,6 @@ export class FetchService implements OnApplicationShutdown {
   private blockBuffer: BlockedQueue<BlockWrapper>;
   private blockNumberBuffer: BlockedQueue<number>;
   private isShutdown = false;
-  private parentSpecVersion: number;
   private useDictionary: boolean;
   private dictionaryQueryEntries?: DictionaryQueryEntry[];
   private batchSizeScale: number;
@@ -322,8 +318,6 @@ export class FetchService implements OnApplicationShutdown {
   }
 
   async fillNextBlockBuffer(initBlockHeight: number): Promise<void> {
-    await this.fetchMeta(initBlockHeight);
-
     let startBlockHeight: number;
     let scaledBatchSize: number;
 
@@ -405,13 +399,7 @@ export class FetchService implements OnApplicationShutdown {
       }
 
       const bufferBlocks = await this.blockNumberBuffer.takeAll(takeCount);
-      const metadataChanged = await this.fetchMeta(
-        bufferBlocks[bufferBlocks.length - 1],
-      );
-      const blocks = await this.api.fetchBlocksBatches(
-        bufferBlocks,
-        metadataChanged ? undefined : this.parentSpecVersion,
-      );
+      const blocks = await this.api.fetchBlocks(bufferBlocks);
       logger.info(
         `fetch block [${bufferBlocks[0]},${
           bufferBlocks[bufferBlocks.length - 1]
@@ -422,30 +410,6 @@ export class FetchService implements OnApplicationShutdown {
         value: this.blockBuffer.size,
       });
     }
-  }
-
-  @profiler(argv.profiler)
-  async fetchMeta(height: number): Promise<boolean> {
-    // This function only make sense for Substrate base chain
-
-    if (this.project.network.type !== 'substrate') {
-      return false;
-    }
-    const substrateApi = this.api as SubstrateApi;
-    const parentBlockHash = await substrateApi.getBlockHash(
-      Math.max(height - 1, 0),
-    );
-    const runtimeVersion = await substrateApi.getRuntimeVersion(
-      parentBlockHash,
-    );
-    const specVersion = runtimeVersion.specVersion.toNumber();
-    if (this.parentSpecVersion !== specVersion) {
-      const blockHash = await substrateApi.getBlockHash(height);
-      await SubstrateUtil.prefetchMetadata(substrateApi.getClient(), blockHash);
-      this.parentSpecVersion = specVersion;
-      return true;
-    }
-    return false;
   }
 
   private nextEndBlockHeight(

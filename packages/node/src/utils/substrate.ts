@@ -21,7 +21,7 @@ import {
   SubstrateExtrinsic,
 } from '@subql/types';
 import { last, merge, range } from 'lodash';
-import { BlockContent } from '../indexer/types';
+import { SubstrateBlockWrapped } from '../indexer/api.substrate';
 import { getLogger } from './logger';
 const logger = getLogger('fetch');
 
@@ -176,14 +176,6 @@ export function filterEvents(
   );
 }
 
-// TODO: prefetch all known runtime upgrades at once
-export async function prefetchMetadata(
-  api: ApiPromise,
-  hash: BlockHash,
-): Promise<void> {
-  await api.getBlockRegistry(hash);
-}
-
 /**
  *
  * @param api
@@ -196,7 +188,7 @@ export async function fetchBlocks(
   startHeight: number,
   endHeight: number,
   overallSpecVer?: number,
-): Promise<BlockContent[]> {
+): Promise<SubstrateBlockWrapped[]> {
   const blocks = await fetchBlocksRange(api, startHeight, endHeight);
   const blockHashs = blocks.map((b) => b.block.header.hash);
   const parentBlockHashs = blocks.map((b) => b.block.header.parentHash);
@@ -215,11 +207,11 @@ export async function fetchBlocks(
     const wrappedBlock = wrapBlock(block, events.toArray(), parentSpecVersion);
     const wrappedExtrinsics = wrapExtrinsics(wrappedBlock, events);
     const wrappedEvents = wrapEvents(wrappedExtrinsics, events, wrappedBlock);
-    return {
-      block: wrappedBlock,
-      extrinsics: wrappedExtrinsics,
-      events: wrappedEvents,
-    };
+    return new SubstrateBlockWrapped(
+      wrappedBlock,
+      wrappedExtrinsics,
+      wrappedEvents,
+    );
   });
 }
 
@@ -227,7 +219,7 @@ export async function fetchBlocksViaRangeQuery(
   api: ApiPromise,
   startHeight: number,
   endHeight: number,
-): Promise<BlockContent[]> {
+): Promise<SubstrateBlockWrapped[]> {
   const blocks = await fetchBlocksRange(api, startHeight, endHeight);
   const firstBlockHash = blocks[0].block.header.hash;
   const endBlockHash = last(blocks).block.header.hash;
@@ -251,11 +243,11 @@ export async function fetchBlocksViaRangeQuery(
     );
     const wrappedExtrinsics = wrapExtrinsics(wrappedBlock, events);
     const wrappedEvents = wrapEvents(wrappedExtrinsics, events, wrappedBlock);
-    return {
-      block: wrappedBlock,
-      extrinsics: wrappedExtrinsics,
-      events: wrappedEvents,
-    };
+    return new SubstrateBlockWrapped(
+      wrappedBlock,
+      wrappedExtrinsics,
+      wrappedEvents,
+    );
   });
 }
 
@@ -327,7 +319,7 @@ export async function fetchBlocksBatches(
   blockArray: number[],
   overallSpecVer?: number,
   // specVersionMap?: number[],
-): Promise<BlockContent[]> {
+): Promise<SubstrateBlockWrapped[]> {
   const blocks = await fetchBlocksArray(api, blockArray);
   const blockHashs = blocks.map((b) => b.block.header.hash);
   const parentBlockHashs = blocks.map((b) => b.block.header.parentHash);
@@ -345,10 +337,10 @@ export async function fetchBlocksBatches(
     const wrappedBlock = wrapBlock(block, events.toArray(), parentSpecVersion);
     const wrappedExtrinsics = wrapExtrinsics(wrappedBlock, events);
     const wrappedEvents = wrapEvents(wrappedExtrinsics, events, wrappedBlock);
-    return {
-      block: wrappedBlock,
-      extrinsics: wrappedExtrinsics,
-      events: wrappedEvents,
-    };
+    return new SubstrateBlockWrapped(
+      wrappedBlock,
+      wrappedExtrinsics,
+      wrappedEvents,
+    );
   });
 }

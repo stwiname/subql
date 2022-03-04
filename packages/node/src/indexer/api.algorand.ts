@@ -52,7 +52,7 @@ export class AlgorandApi implements ApiWrapper {
     return lastHeight;
   }
 
-  async fetchBlocksBatches(bufferBlocks: number[]): Promise<BlockWrapper[]> {
+  async fetchBlocks(bufferBlocks: number[]): Promise<BlockWrapper[]> {
     return Promise.all(
       bufferBlocks.map(
         async (round) =>
@@ -64,10 +64,6 @@ export class AlgorandApi implements ApiWrapper {
 
 export class AlgorandBlockWrapped implements BlockWrapper {
   constructor(private block: AlgorandBlock) {}
-
-  setBlock(block: AlgorandBlock): void {
-    this.block = block as AlgorandBlock;
-  }
 
   getBlock(): AlgorandBlock {
     return this.block;

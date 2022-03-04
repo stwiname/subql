@@ -3,18 +3,12 @@
 
 import { ApiPromise } from '@polkadot/api';
 import { ApiDecoration } from '@polkadot/api/types';
-import {
-  Entity,
-  SubstrateBlock,
-  SubstrateEvent,
-  SubstrateExtrinsic,
-} from '@subql/types';
+import { Entity, SubstrateBlock } from '@subql/types';
 import algosdk from 'algosdk';
 
 export type ApiAt = ApiDecoration<'promise'> & { rpc: ApiPromise['rpc'] };
 
 export interface BlockWrapper {
-  setBlock: (block: BlockContent | AlgorandBlock) => void;
   getBlock: () => SubstrateBlock | AlgorandBlock;
   getBlockHeight: () => number;
   getHash: () => string;
@@ -27,10 +21,7 @@ export interface ApiWrapper {
   getSpecName: () => string;
   getFinalizedBlockHeight: () => Promise<number>;
   getLastHeight: () => Promise<number>;
-  fetchBlocksBatches: (
-    bufferBlocks: number[],
-    overallSpecNumber?: number,
-  ) => Promise<BlockWrapper[]>;
+  fetchBlocks: (bufferBlocks: number[]) => Promise<BlockWrapper[]>;
 }
 
 /****************************************************/
@@ -65,12 +56,6 @@ export type AvalancheOptions = {
 /****************************************************/
 /*             SUBSTRATE SPECIFIC TYPES             */
 /****************************************************/
-
-export interface BlockContent {
-  block: SubstrateBlock;
-  extrinsics: SubstrateExtrinsic[];
-  events: SubstrateEvent[];
-}
 
 export enum OperationType {
   Set = 'Set',

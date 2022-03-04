@@ -20,11 +20,11 @@ import {
   SubstrateExtrinsic,
   SubstrateEvent,
 } from '../../../types/dist/interfaces';
-import { profilerWrap } from '../utils/profiler';
+import { profiler, profilerWrap } from '../utils/profiler';
 import * as SubstrateUtil from '../utils/substrate';
 import { getYargsOption } from '../yargs';
 import { IndexerEvent } from './events';
-import { ApiAt, ApiWrapper, BlockWrapper, BlockContent } from './types';
+import { ApiAt, ApiWrapper, BlockWrapper } from './types';
 
 const NOT_SUPPORT = (name: string) => () => {
   throw new Error(`${name}() is not supported`);
@@ -36,6 +36,7 @@ export class SubstrateApi implements ApiWrapper {
   private currentBlockNumber: number;
   private currentRuntimeVersion: RuntimeVersion;
   private options: ApiOptions;
+  private parentSpecVersion: number;
 
   constructor(
     network: Partial<ProjectNetworkConfig>,
@@ -101,25 +102,24 @@ export class SubstrateApi implements ApiWrapper {
     return lastHeight;
   }
 
-  async fetchBlocksBatches(
-    bufferBlocks: number[],
-    overallSpecNumber?: number,
-  ): Promise<BlockWrapper[]> {
+  async fetchBlocks(bufferBlocks: number[]): Promise<BlockWrapper[]> {
     const { argv } = getYargsOption();
 
-    const fetchBlocksBatchesUtil = argv.profiler
+    const fetchBlocksProfiled = argv.profiler
       ? profilerWrap(
           SubstrateUtil.fetchBlocksBatches,
           'SubstrateUtil',
           'fetchBlocksBatches',
         )
       : SubstrateUtil.fetchBlocksBatches;
-    const blocksContent = await fetchBlocksBatchesUtil(
-      bufferBlocks,
-      overallSpecNumber,
+
+    const metadataChanged = await this.fetchMeta(
+      bufferBlocks[bufferBlocks.length - 1],
     );
-    const blocks = blocksContent.map(
-      (b: BlockContent) => new SubstrateBlockWrapped(b),
+    const blocks = await fetchBlocksProfiled(
+      this.client,
+      bufferBlocks,
+      metadataChanged ? undefined : this.parentSpecVersion,
     );
     return blocks;
   }
@@ -145,18 +145,6 @@ export class SubstrateApi implements ApiWrapper {
     )) as ApiAt;
     this.patchApiRpc(this.client, apiAt);
     return apiAt;
-  }
-
-  async getBlockHash(height: number): Promise<BlockHash> {
-    const blockHash = await this.client.rpc.chain.getBlockHash(height);
-    return blockHash;
-  }
-
-  async getRuntimeVersion(blockHash: BlockHash): Promise<RuntimeVersion> {
-    const runtimeVersion = await this.client.rpc.state.getRuntimeVersion(
-      blockHash,
-    );
-    return runtimeVersion;
   }
 
   async disconnect(): Promise<void> {
@@ -225,25 +213,40 @@ export class SubstrateApi implements ApiWrapper {
 
     return `api.rpc.${ext?.section ?? '*'}.${ext?.method ?? '*'}`;
   }
+
+  @profiler(getYargsOption().argv.profiler)
+  private async fetchMeta(height: number): Promise<boolean> {
+    const blockHash = await this.client.rpc.chain.getBlockHash(height);
+    const runtimeVersion = await this.client.rpc.state.getRuntimeVersion(
+      blockHash,
+    );
+    const specVersion = runtimeVersion.specVersion.toNumber();
+    if (this.parentSpecVersion !== specVersion) {
+      await this.client.getBlockRegistry(blockHash);
+      this.parentSpecVersion = specVersion;
+      return true;
+    }
+    return false;
+  }
 }
 
 export class SubstrateBlockWrapped implements BlockWrapper {
-  constructor(private block: BlockContent) {}
-
-  setBlock(block: BlockContent): void {
-    this.block = block as BlockContent;
-  }
+  constructor(
+    private block: SubstrateBlock,
+    private extrinsics: SubstrateExtrinsic[],
+    private events: SubstrateEvent[],
+  ) {}
 
   getBlock(): SubstrateBlock {
-    return this.block.block;
+    return this.block;
   }
 
   getBlockHeight(): number {
-    return this.block.block.block.header.number.toNumber();
+    return this.block.block.header.number.toNumber();
   }
 
   getHash(): string {
-    return this.block.block.block.header.hash.toHex();
+    return this.block.block.header.hash.toHex();
   }
 
   /****************************************************/
@@ -251,14 +254,10 @@ export class SubstrateBlockWrapped implements BlockWrapper {
   /****************************************************/
 
   getExtrinsincs(): SubstrateExtrinsic[] {
-    return this.block.extrinsics;
+    return this.extrinsics;
   }
 
   getEvents(): SubstrateEvent[] {
-    return this.block.events;
-  }
-
-  getBlockContent(): BlockContent {
-    return this.block;
+    return this.events;
   }
 }
