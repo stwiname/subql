@@ -15,7 +15,7 @@ import {
   RegisteredTypes,
 } from '@polkadot/types/types';
 import { ProjectNetworkConfig } from '@subql/common';
-import { SubstrateBlock } from '@subql/types';
+import { SubstrateBlock, ApiWrapper, BlockWrapper } from '@subql/types';
 import {
   SubstrateExtrinsic,
   SubstrateEvent,
@@ -24,7 +24,7 @@ import { profiler, profilerWrap } from '../utils/profiler';
 import * as SubstrateUtil from '../utils/substrate';
 import { getYargsOption } from '../yargs';
 import { IndexerEvent } from './events';
-import { ApiAt, ApiWrapper, BlockWrapper } from './types';
+import { ApiAt } from './types';
 
 const NOT_SUPPORT = (name: string) => () => {
   throw new Error(`${name}() is not supported`);

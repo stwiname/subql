@@ -19,6 +19,8 @@ import {
   SubqlDatasource,
   SubqlHandlerFilter,
   DictionaryQueryEntry,
+  ApiWrapper,
+  BlockWrapper,
 } from '@subql/types';
 import { isUndefined, range, sortBy, uniqBy } from 'lodash';
 import { NodeConfig } from '../configure/NodeConfig';
@@ -32,7 +34,6 @@ import { BlockedQueue } from './BlockedQueue';
 import { Dictionary, DictionaryService } from './dictionary.service';
 import { DsProcessorService } from './ds-processor.service';
 import { IndexerEvent } from './events';
-import { ApiWrapper, BlockWrapper } from './types';
 
 const logger = getLogger('fetch');
 const BLOCK_TIME_VARIANCE = 5;

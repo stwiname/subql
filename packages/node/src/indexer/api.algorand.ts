@@ -1,13 +1,9 @@
 // Copyright 2020-2022 OnFinality Limited authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
+import { AlgorandBlock, ApiWrapper, BlockWrapper } from '@subql/types';
 import algosdk from 'algosdk';
-import {
-  AlgorandBlock,
-  AlgorandOptions,
-  ApiWrapper,
-  BlockWrapper,
-} from './types';
+import { AlgorandOptions } from './types';
 
 export class AlgorandApi implements ApiWrapper {
   private lastHeader: any;

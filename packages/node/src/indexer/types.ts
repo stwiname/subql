@@ -3,32 +3,14 @@
 
 import { ApiPromise } from '@polkadot/api';
 import { ApiDecoration } from '@polkadot/api/types';
-import { Entity, SubstrateBlock } from '@subql/types';
+import { Entity } from '@subql/types';
 import algosdk from 'algosdk';
 
 export type ApiAt = ApiDecoration<'promise'> & { rpc: ApiPromise['rpc'] };
 
-export interface BlockWrapper {
-  getBlock: () => SubstrateBlock | AlgorandBlock;
-  getBlockHeight: () => number;
-  getHash: () => string;
-}
-
-export interface ApiWrapper {
-  init: () => Promise<void>;
-  getGenesisHash: () => string;
-  getRuntimeChain: () => string;
-  getSpecName: () => string;
-  getFinalizedBlockHeight: () => Promise<number>;
-  getLastHeight: () => Promise<number>;
-  fetchBlocks: (bufferBlocks: number[]) => Promise<BlockWrapper[]>;
-}
-
 /****************************************************/
 /*             ALGORAND SPECIFIC TYPES              */
 /****************************************************/
-
-export type AlgorandBlock = Record<string, any>;
 
 export type AlgorandOptions = {
   token: string;

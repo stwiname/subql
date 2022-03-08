@@ -22,6 +22,8 @@ import {
   SubqlHandlerKind,
   SubqlNetworkFilter,
   SubqlRuntimeHandler,
+  ApiWrapper,
+  BlockWrapper,
 } from '@subql/types';
 import { QueryTypes, Sequelize, Transaction } from 'sequelize';
 import { NodeConfig } from '../configure/NodeConfig';
@@ -43,7 +45,7 @@ import { PoiService } from './poi.service';
 import { PoiBlock } from './PoiBlock';
 import { IndexerSandbox, SandboxService } from './sandbox.service';
 import { StoreService } from './store.service';
-import { ApiAt, ApiWrapper, BlockWrapper } from './types';
+import { ApiAt } from './types';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { version: packageVersion } = require('../../package.json');
@@ -119,6 +121,7 @@ export class IndexerManager {
     });
     const tx = await this.sequelize.transaction();
     this.storeService.setTransaction(tx);
+    console.log('this.filteredDataSources', this.filteredDataSources);
 
     let poiBlockHash: Uint8Array;
     if (this.project.network.type === 'substrate') {
@@ -133,25 +136,13 @@ export class IndexerManager {
 
         // Run predefined data sources
         for (const ds of this.filteredDataSources) {
-          await this.indexBlockForDs(
-            ds,
-            blockContent as SubstrateBlockWrapped,
-            apiAt,
-            blockHeight,
-            tx,
-          );
+          await this.indexBlockForDs(ds, blockContent, apiAt, blockHeight, tx);
         }
 
         // Run dynamic data sources, must be after predefined datasources
         // FIXME if any new dynamic datasources are created here they wont be run for the current block
         for (const ds of await this.dynamicDsService.getDynamicDatasources()) {
-          await this.indexBlockForDs(
-            ds,
-            blockContent as SubstrateBlockWrapped,
-            apiAt,
-            blockHeight,
-            tx,
-          );
+          await this.indexBlockForDs(ds, blockContent, apiAt, blockHeight, tx);
         }
 
         await this.storeService.setMetadataBatch(
@@ -477,40 +468,37 @@ export class IndexerManager {
     handlers: SubqlRuntimeHandler[],
     blockContent: BlockWrapper,
   ): Promise<void> {
-    if (this.project.network.type === 'substrate') {
-      const substrateBlockContent = blockContent as SubstrateBlockWrapped;
-      const block = substrateBlockContent.getBlock();
-      const extrinsics = substrateBlockContent.getExtrinsincs();
-      const events = substrateBlockContent.getEvents();
-      for (const handler of handlers) {
-        switch (handler.kind) {
-          case SubqlHandlerKind.Block:
-            if (SubstrateUtil.filterBlock(block, handler.filter)) {
-              await vm.securedExec(handler.handler, [block]);
-            }
-            break;
-          case SubqlHandlerKind.Call: {
-            const filteredExtrinsics = SubstrateUtil.filterExtrinsics(
-              extrinsics,
-              handler.filter,
-            );
-            for (const e of filteredExtrinsics) {
-              await vm.securedExec(handler.handler, [e]);
-            }
-            break;
-          }
-          case SubqlHandlerKind.Event: {
-            const filteredEvents = SubstrateUtil.filterEvents(
-              events,
-              handler.filter,
-            );
-            for (const e of filteredEvents) {
-              await vm.securedExec(handler.handler, [e]);
-            }
-            break;
-          }
-          default:
-        }
+    const block = blockContent.getBlock();
+    // const extrinsics = substrateBlockContent.getExtrinsincs();
+    // const events = substrateBlockContent.getEvents();
+    for (const handler of handlers) {
+      switch (handler.kind) {
+        case SubqlHandlerKind.Block:
+          //  if (SubstrateUtil.filterBlock(block, handler.filter)) {
+          await vm.securedExec(handler.handler, [block]);
+          //  }
+          break;
+        // case SubqlHandlerKind.Call: {
+        //   const filteredExtrinsics = SubstrateUtil.filterExtrinsics(
+        //     extrinsics,
+        //     handler.filter,
+        //   );
+        //   for (const e of filteredExtrinsics) {
+        //     await vm.securedExec(handler.handler, [e]);
+        //   }
+        //   break;
+        // }
+        // case SubqlHandlerKind.Event: {
+        //   const filteredEvents = SubstrateUtil.filterEvents(
+        //     events,
+        //     handler.filter,
+        //   );
+        //   for (const e of filteredEvents) {
+        //     await vm.securedExec(handler.handler, [e]);
+        //   }
+        //   break;
+        // }
+        default:
       }
     }
   }

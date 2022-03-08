@@ -43,4 +43,22 @@ export interface SubstrateEvent extends EventRecord {
   block: SubstrateBlock;
 }
 
+export type AlgorandBlock = Record<string, any>;
+
+export interface BlockWrapper {
+  getBlock: () => SubstrateBlock | AlgorandBlock;
+  getBlockHeight: () => number;
+  getHash: () => string;
+}
+
+export interface ApiWrapper {
+  init: () => Promise<void>;
+  getGenesisHash: () => string;
+  getRuntimeChain: () => string;
+  getSpecName: () => string;
+  getFinalizedBlockHeight: () => Promise<number>;
+  getLastHeight: () => Promise<number>;
+  fetchBlocks: (bufferBlocks: number[]) => Promise<BlockWrapper[]>;
+}
+
 export type DynamicDatasourceCreator = (name: string, args: Record<string, unknown>) => Promise<void>;

@@ -4,13 +4,14 @@
 import { Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BlockHash } from '@polkadot/types/interfaces';
+import { ApiWrapper } from '@subql/types';
 import { SubqueryProject } from '../configure/SubqueryProject';
 import { getLogger } from '../utils/logger';
 import { AlgorandApi } from './api.algorand';
 import { AvalancheApi } from './api.avalanche';
 import { SubstrateApi } from './api.substrate';
 import { NetworkMetadataPayload } from './events';
-import { ApiAt, ApiWrapper } from './types';
+import { ApiAt } from './types';
 
 const logger = getLogger('api');
 

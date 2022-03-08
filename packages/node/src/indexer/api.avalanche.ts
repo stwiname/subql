@@ -1,10 +1,11 @@
 // Copyright 2020-2022 OnFinality Limited authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
+import { ApiWrapper } from '@subql/types';
 import { Avalanche, BinTools } from 'avalanche';
 import { IndexAPI } from 'avalanche/dist/apis/index';
 import { GetContainerByIndexResponse } from 'avalanche/dist/apis/index/interfaces';
-import { AvalancheOptions, ApiWrapper } from './types';
+import { AvalancheOptions } from './types';
 
 export class AvalancheApi implements ApiWrapper {
   private client: Avalanche;
