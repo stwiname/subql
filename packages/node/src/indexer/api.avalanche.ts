@@ -3,7 +3,7 @@
 
 import { ApiWrapper, AvalancheBlock, BlockWrapper } from '@subql/types';
 import { Avalanche, BinTools } from 'avalanche';
-import { EVMAPI, Tx, UnsignedTx } from 'avalanche/dist/apis/evm';
+import { EVMAPI, EVMBaseTx } from 'avalanche/dist/apis/evm';
 import { IndexAPI } from 'avalanche/dist/apis/index';
 import { GetContainerByIndexResponse } from 'avalanche/dist/apis/index/interfaces';
 import { AvalancheOptions } from './types';
@@ -81,28 +81,18 @@ export class AvalancheApi implements ApiWrapper {
   }
 
   async fetchBlocks(bufferBlocks: number[]): Promise<BlockWrapper[]> {
-    const blocks = await this.indexApi.getContainerRange(
+    const blocks = (await this.indexApi.getContainerRange(
       bufferBlocks[0],
       bufferBlocks.length,
       this.encoding,
       this.baseUrl,
-    );
+    )) as any;
 
-    const test = new Tx();
-    let offset = 0;
+    const test = new EVMBaseTx();
     const bytes = this.bintools.cb58Decode(blocks.containers[0].bytes);
-    console.log(blocks.containers[0]);
-    const codecID = this.bintools
-      .copyFrom(bytes, offset, offset + 2)
-      .readUInt16BE(0);
-    offset += 2;
-    const txtype = this.bintools
-      .copyFrom(bytes, offset, offset + 4)
-      .readUInt32BE(0);
-    console.log(codecID, txtype);
     try {
-      const atotx = test.fromBuffer(bytes);
-      console.log(atotx);
+      test.fromBuffer(bytes);
+      console.log(test);
     } catch (error) {
       console.log(error);
     }
