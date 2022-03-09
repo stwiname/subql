@@ -121,7 +121,6 @@ export class IndexerManager {
     });
     const tx = await this.sequelize.transaction();
     this.storeService.setTransaction(tx);
-    console.log('this.filteredDataSources', this.filteredDataSources);
 
     let poiBlockHash: Uint8Array;
     if (this.project.network.type === 'substrate') {

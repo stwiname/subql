@@ -45,8 +45,10 @@ export interface SubstrateEvent extends EventRecord {
 
 export type AlgorandBlock = Record<string, any>;
 
+export type AvalancheBlock = Record<string, any>;
+
 export interface BlockWrapper {
-  getBlock: () => SubstrateBlock | AlgorandBlock;
+  getBlock: () => SubstrateBlock | AlgorandBlock | AvalancheBlock;
   getBlockHeight: () => number;
   getHash: () => string;
 }

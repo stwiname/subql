@@ -30,9 +30,8 @@ export interface AlgorandApi {
 export type AvalancheOptions = {
   ip: string;
   port: number;
-  protocol: string;
-  networkID: number;
-  chainName: string; // X | C | P
+  token: string;
+  chainName: string; // XV | XT | C | P
 };
 
 /****************************************************/

@@ -18,8 +18,6 @@ export interface ProjectNetworkConfig {
   genesisHash?: string;
   type?: string;
   token?: string;
-  port?: string;
-  protocol?: string;
-  networkID?: number;
+  port?: number;
   chainName?: string;
 }

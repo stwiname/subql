@@ -4,6 +4,8 @@
 import { Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BlockHash } from '@polkadot/types/interfaces';
+import { RegisteredTypes } from '@polkadot/types/types';
+import { ProjectNetworkConfig } from '@subql/common';
 import { ApiWrapper } from '@subql/types';
 import { SubqueryProject } from '../configure/SubqueryProject';
 import { getLogger } from '../utils/logger';
@@ -34,12 +36,13 @@ export class ApiService implements OnApplicationShutdown {
 
   async init(): Promise<ApiService> {
     try {
-      let chainTypes, network;
+      let chainTypes: RegisteredTypes;
+      let network: Partial<ProjectNetworkConfig>;
       try {
         chainTypes = this.project.chainTypes;
         network = this.project.network;
       } catch (e) {
-        logger.error(e);
+        logger.error(Object.keys(e));
         process.exit(1);
       }
       logger.info(JSON.stringify(this.project.network));
@@ -61,8 +64,7 @@ export class ApiService implements OnApplicationShutdown {
           this.api = new AvalancheApi({
             ip: network.endpoint,
             port: network.port,
-            protocol: network.protocol,
-            networkID: network.networkID,
+            token: network.token,
             chainName: network.chainName,
           });
           break;
