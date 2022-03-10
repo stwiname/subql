@@ -66,7 +66,6 @@ export class SubstrateApi implements ApiWrapper {
     this.eventEmitter.emit(IndexerEvent.ApiConnected, { value: 1 });
 
     this.client.on('connected', () => {
-      console.log('connected');
       this.eventEmitter.emit(IndexerEvent.ApiConnected, { value: 1 });
     });
     this.client.on('disconnected', () => {

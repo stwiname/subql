@@ -225,9 +225,7 @@ export class FetchService implements OnApplicationShutdown {
           } catch (e) {
             logger.error(
               e,
-              `failed to index block at height ${block
-                .getBlock()
-                .block.header.number.toString()} ${
+              `failed to index block at height ${block.getBlockHeight()} ${
                 e.handler ? `${e.handler}(${e.handlerArgs ?? ''})` : ''
               }`,
             );

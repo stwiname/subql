@@ -16,16 +16,9 @@ import {CustomDataSourceBase, Mapping, RuntimeDataSourceBase} from '../../models
 import {ProjectManifestBaseImpl} from '../base';
 import {CustomDatasourceV0_3_0, ProjectManifestV0_3_0, RuntimeDataSourceV0_3_0, SubqlMappingV0_3_0} from './types';
 
-// export class FileType {
-//   @IsString()
-//   file: string;
-// }
-
 export class ProjectNetworkDeploymentV0_3_0 {
   @IsString()
   genesisHash: string;
-  @IsString()
-  connectionChain: string;
   @ValidateNested()
   @Type(() => FileType)
   @IsOptional()
