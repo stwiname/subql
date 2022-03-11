@@ -454,8 +454,6 @@ export class IndexerManager {
     handlers: SubqlRuntimeHandler[],
     blockContent: BlockWrapper,
   ): Promise<void> {
-    const block = blockContent.getBlock();
-    // const extrinsics = substrateBlockContent.getExtrinsincs();
     // const events = substrateBlockContent.getEvents();
     for (const handler of handlers) {
       switch (handler.kind) {
@@ -464,27 +462,26 @@ export class IndexerManager {
           await vm.securedExec(handler.handler, [blockContent]);
           //  }
           break;
-        // TODO
-        // case SubqlHandlerKind.Call: {
-        //   const filteredExtrinsics = SubstrateUtil.filterExtrinsics(
-        //     extrinsics,
-        //     handler.filter,
-        //   );
-        //   for (const e of filteredExtrinsics) {
-        //     await vm.securedExec(handler.handler, [e]);
-        //   }
-        //   break;
-        // }
-        // case SubqlHandlerKind.Event: {
-        //   const filteredEvents = SubstrateUtil.filterEvents(
-        //     events,
-        //     handler.filter,
-        //   );
-        //   for (const e of filteredEvents) {
-        //     await vm.securedExec(handler.handler, [e]);
-        //   }
-        //   break;
-        // }
+        case SubqlHandlerKind.Call: {
+          const filteredExtrinsics = SubstrateUtil.filterExtrinsics(
+            (blockContent as SubstrateBlockWrapped).getExtrinsincs(),
+            handler.filter,
+          );
+          for (const e of filteredExtrinsics) {
+            await vm.securedExec(handler.handler, [e]);
+          }
+          break;
+        }
+        case SubqlHandlerKind.Event: {
+          const filteredEvents = SubstrateUtil.filterEvents(
+            (blockContent as SubstrateBlockWrapped).getEvents(),
+            handler.filter,
+          );
+          for (const e of filteredEvents) {
+            await vm.securedExec(handler.handler, [e]);
+          }
+          break;
+        }
         default:
       }
     }
