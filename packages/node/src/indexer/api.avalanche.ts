@@ -3,15 +3,14 @@
 
 import { ApiWrapper, AvalancheBlock, BlockWrapper } from '@subql/types';
 import { Avalanche, BinTools } from 'avalanche';
-import { EVMAPI, EVMBaseTx } from 'avalanche/dist/apis/evm';
+import { EVMAPI } from 'avalanche/dist/apis/evm';
 import { IndexAPI } from 'avalanche/dist/apis/index';
-import { GetContainerByIndexResponse } from 'avalanche/dist/apis/index/interfaces';
 import { AvalancheOptions } from './types';
 
 export class AvalancheApi implements ApiWrapper {
   private client: Avalanche;
   private indexApi: IndexAPI;
-  private genesisBlock: GetContainerByIndexResponse;
+  private genesisBlock: Record<string, any>;
   private encoding: string;
   private baseUrl: string;
   private bintools: BinTools;
@@ -19,7 +18,7 @@ export class AvalancheApi implements ApiWrapper {
 
   constructor(private options: AvalancheOptions) {
     this.encoding = 'cb58';
-    this.client = new Avalanche(this.options.ip, this.options.port);
+    this.client = new Avalanche(this.options.ip, this.options.port, 'http');
     this.client.setAuthToken(this.options.token);
     this.indexApi = this.client.Index();
     this.bintools = BinTools.getInstance();
@@ -43,15 +42,18 @@ export class AvalancheApi implements ApiWrapper {
   }
 
   async init(): Promise<void> {
-    this.genesisBlock = await this.indexApi.getContainerByIndex(
-      '0',
-      this.encoding,
-      this.baseUrl,
-    );
+    this.genesisBlock = (
+      await this.cchain.callMethod(
+        'eth_getBlockByNumber',
+        ['0x0', true],
+        '/ext/bc/C/rpc',
+      )
+    ).data.result;
+    console.log(this.genesisBlock);
   }
 
   getGenesisHash(): string {
-    return this.genesisBlock.id;
+    return this.genesisBlock.hash;
   }
 
   getRuntimeChain(): string {
@@ -76,27 +78,25 @@ export class AvalancheApi implements ApiWrapper {
       this.encoding,
       this.baseUrl,
     );
-    const lastHeight = await this.indexApi.getIndex(lastAccepted.id);
-    return parseInt(lastHeight);
+    const lastHeight = parseInt(lastAccepted.index);
+    return lastHeight;
   }
 
   async fetchBlocks(bufferBlocks: number[]): Promise<BlockWrapper[]> {
-    const blocks = (await this.indexApi.getContainerRange(
-      bufferBlocks[0],
-      bufferBlocks.length,
-      this.encoding,
-      this.baseUrl,
-    )) as any;
-
-    const test = new EVMBaseTx();
-    const bytes = this.bintools.cb58Decode(blocks.containers[0].bytes);
-    try {
-      test.fromBuffer(bytes);
-      console.log(test);
-    } catch (error) {
-      console.log(error);
-    }
-    return blocks.containers.map((b) => new AvalancheBlockWrapped(b));
+    return Promise.all(
+      bufferBlocks.map(
+        async (num) =>
+          new AvalancheBlockWrapped(
+            (
+              await this.cchain.callMethod(
+                'eth_getBlockByNumber',
+                [`0x${num.toString(16)}`, true],
+                '/ext/bc/C/rpc',
+              )
+            ).data.result,
+          ),
+      ),
+    );
   }
 }
 
@@ -104,14 +104,35 @@ export class AvalancheBlockWrapped implements BlockWrapper {
   constructor(private block: AvalancheBlock) {}
 
   getBlock(): AvalancheBlock {
-    return { bytes: this.block.bytes };
+    return this.block;
   }
 
   getBlockHeight(): number {
-    return parseInt(this.block.index);
+    return parseInt(this.block.number);
   }
 
   getHash(): string {
-    return this.block.id;
+    return this.block.hash;
+  }
+
+  /****************************************************/
+  /*           AVALANCHE SPECIFIC METHODS             */
+  /****************************************************/
+
+  get(objects: string[]): Record<string, any> {
+    return objects.map((obj) => this.block[obj]);
+  }
+
+  getTransactions(filters?: string[]): Record<string, any> {
+    if (!filters) {
+      return this.block.transactions;
+    }
+    return this.block.transactions.map((trx) => {
+      const filteredTrx = {};
+      filters.forEach((filter) => {
+        filteredTrx[filter] = trx[filter];
+      });
+      return filteredTrx;
+    });
   }
 }

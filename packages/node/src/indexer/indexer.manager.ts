@@ -454,7 +454,6 @@ export class IndexerManager {
     handlers: SubqlRuntimeHandler[],
     blockContent: BlockWrapper,
   ): Promise<void> {
-    // const events = substrateBlockContent.getEvents();
     for (const handler of handlers) {
       switch (handler.kind) {
         case SubqlHandlerKind.Block:
