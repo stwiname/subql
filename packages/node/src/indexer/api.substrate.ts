@@ -15,11 +15,14 @@ import {
   RegisteredTypes,
 } from '@polkadot/types/types';
 import { ProjectNetworkConfig } from '@subql/common';
-import { SubstrateBlock, ApiWrapper, BlockWrapper } from '@subql/types';
 import {
+  SubstrateBlock,
+  ApiWrapper,
+  BlockWrapper,
+  SubstrateBlockWrapper,
   SubstrateExtrinsic,
   SubstrateEvent,
-} from '../../../types/dist/interfaces';
+} from '@subql/types';
 import { profiler, profilerWrap } from '../utils/profiler';
 import * as SubstrateUtil from '../utils/substrate';
 import { getYargsOption } from '../yargs';
@@ -229,7 +232,7 @@ export class SubstrateApi implements ApiWrapper {
   }
 }
 
-export class SubstrateBlockWrapped implements BlockWrapper {
+export class SubstrateBlockWrapped implements SubstrateBlockWrapper {
   constructor(
     private block: SubstrateBlock,
     private extrinsics: SubstrateExtrinsic[],

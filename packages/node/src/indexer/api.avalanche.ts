@@ -1,7 +1,12 @@
 // Copyright 2020-2022 OnFinality Limited authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { ApiWrapper, AvalancheBlock, BlockWrapper } from '@subql/types';
+import {
+  ApiWrapper,
+  AvalancheBlock,
+  BlockWrapper,
+  AvalancheBlockWrapper,
+} from '@subql/types';
 import { Avalanche, BinTools } from 'avalanche';
 import { EVMAPI } from 'avalanche/dist/apis/evm';
 import { IndexAPI } from 'avalanche/dist/apis/index';
@@ -100,7 +105,7 @@ export class AvalancheApi implements ApiWrapper {
   }
 }
 
-export class AvalancheBlockWrapped implements BlockWrapper {
+export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
   constructor(private block: AvalancheBlock) {}
 
   getBlock(): AvalancheBlock {

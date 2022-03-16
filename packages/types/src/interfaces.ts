@@ -63,4 +63,14 @@ export interface ApiWrapper {
   fetchBlocks: (bufferBlocks: number[]) => Promise<BlockWrapper[]>;
 }
 
+export interface AvalancheBlockWrapper extends BlockWrapper {
+  get: (objects: string[]) => Record<string, any>;
+  getTransactions: (filters?: string[]) => Record<string, any>;
+}
+
+export interface SubstrateBlockWrapper extends BlockWrapper {
+  getExtrinsincs: () => SubstrateExtrinsic[];
+  getEvents: () => SubstrateEvent[];
+}
+
 export type DynamicDatasourceCreator = (name: string, args: Record<string, unknown>) => Promise<void>;
