@@ -45,7 +45,6 @@ import { PoiService } from './poi.service';
 import { PoiBlock } from './PoiBlock';
 import { IndexerSandbox, SandboxService } from './sandbox.service';
 import { StoreService } from './store.service';
-import { ApiAt } from './types';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { version: packageVersion } = require('../../package.json');
@@ -82,11 +81,10 @@ export class IndexerManager {
   async indexBlockForDs(
     ds: SubqlProjectDs,
     blockContent: BlockWrapper,
-    apiAt: ApiAt,
     blockHeight: number,
     tx: Transaction,
   ): Promise<void> {
-    const vm = this.sandboxService.getDsProcessor(ds, apiAt);
+    const vm = this.sandboxService.getDsProcessorWrapper(ds, this.api);
 
     // Inject function to create ds into vm
     vm.freeze(
@@ -123,53 +121,43 @@ export class IndexerManager {
     this.storeService.setTransaction(tx);
 
     let poiBlockHash: Uint8Array;
-    if (this.project.network.type === 'substrate') {
-      try {
-        const isUpgraded = block.specVersion !== this.prevSpecVersion;
-        // if parentBlockHash injected, which means we need to check runtime upgrade
-        const apiAt = await this.apiService.getPatchedApi(
-          block.block.hash,
-          block.block.header.number.unwrap().toNumber(),
-          isUpgraded ? block.block.header.parentHash : undefined,
-        );
-
-        // Run predefined data sources
-        for (const ds of this.filteredDataSources) {
-          await this.indexBlockForDs(ds, blockContent, apiAt, blockHeight, tx);
-        }
-
-        // Run dynamic data sources, must be after predefined datasources
-        // FIXME if any new dynamic datasources are created here they wont be run for the current block
-        for (const ds of await this.dynamicDsService.getDynamicDatasources()) {
-          await this.indexBlockForDs(ds, blockContent, apiAt, blockHeight, tx);
-        }
-
-        await this.storeService.setMetadataBatch(
-          [
-            { key: 'lastProcessedHeight', value: blockHeight },
-            { key: 'lastProcessedTimestamp', value: Date.now() },
-          ],
-          { transaction: tx },
-        );
-        if (this.nodeConfig.proofOfIndex) {
-          const operationHash = this.storeService.getOperationMerkleRoot();
-          //check if operation is null, then poi will not be insert
-          if (!u8aEq(operationHash, NULL_MERKEL_ROOT)) {
-            const poiBlock = PoiBlock.create(
-              blockHeight,
-              blockContent.getHash(),
-              operationHash,
-              await this.poiService.getLatestPoiBlockHash(),
-              this.project.id,
-            );
-            poiBlockHash = poiBlock.hash;
-            await this.storeService.setPoi(poiBlock, { transaction: tx });
-          }
-        }
-      } catch (e) {
-        await tx.rollback();
-        throw e;
+    try {
+      // Run predefined data sources
+      for (const ds of this.filteredDataSources) {
+        await this.indexBlockForDs(ds, blockContent, blockHeight, tx);
       }
+
+      // Run dynamic data sources, must be after predefined datasources
+      // FIXME if any new dynamic datasources are created here they wont be run for the current block
+      for (const ds of await this.dynamicDsService.getDynamicDatasources()) {
+        await this.indexBlockForDs(ds, blockContent, blockHeight, tx);
+      }
+
+      await this.storeService.setMetadataBatch(
+        [
+          { key: 'lastProcessedHeight', value: blockHeight },
+          { key: 'lastProcessedTimestamp', value: Date.now() },
+        ],
+        { transaction: tx },
+      );
+      if (this.nodeConfig.proofOfIndex) {
+        const operationHash = this.storeService.getOperationMerkleRoot();
+        //check if operation is null, then poi will not be insert
+        if (!u8aEq(operationHash, NULL_MERKEL_ROOT)) {
+          const poiBlock = PoiBlock.create(
+            blockHeight,
+            blockContent.getHash(),
+            operationHash,
+            await this.poiService.getLatestPoiBlockHash(),
+            this.project.id,
+          );
+          poiBlockHash = poiBlock.hash;
+          await this.storeService.setPoi(poiBlock, { transaction: tx });
+        }
+      }
+    } catch (e) {
+      await tx.rollback();
+      throw e;
     }
     await tx.commit();
     this.fetchService.latestProcessed(blockContent.getBlockHeight());
@@ -404,14 +392,10 @@ export class IndexerManager {
   }
 
   private filterDataSources(processedHeight: number): SubqlProjectDs[] {
-    if (this.project.network.type !== 'substrate') {
-      return null;
-    }
-    const substrateApi = this.api as SubstrateApi;
     let filteredDs = this.getDataSourcesForSpecName();
     if (filteredDs.length === 0) {
       logger.error(
-        `Did not find any dataSource match with network specName ${substrateApi.getSpecName()}`,
+        `Did not find any dataSource match with network specName ${this.api.getSpecName()}`,
       );
       process.exit(1);
     }
@@ -426,9 +410,10 @@ export class IndexerManager {
     // perform filter for custom ds
     filteredDs = filteredDs.filter((ds) => {
       if (isCustomDs(ds)) {
-        return this.dsProcessorService
-          .getDsProcessor(ds)
-          .dsFilterProcessor(ds, substrateApi.getClient());
+        // return this.dsProcessorService
+        //   .getDsProcessor(ds)
+        //   .dsFilterProcessor(ds, this.api);
+        return false; // TODO
       } else {
         return true;
       }
@@ -467,36 +452,28 @@ export class IndexerManager {
     handlers: SubqlRuntimeHandler[],
     blockContent: BlockWrapper,
   ): Promise<void> {
-    const block = blockContent.getBlock();
-    // const extrinsics = substrateBlockContent.getExtrinsincs();
-    // const events = substrateBlockContent.getEvents();
     for (const handler of handlers) {
       switch (handler.kind) {
         case SubqlHandlerKind.Block:
-          //  if (SubstrateUtil.filterBlock(block, handler.filter)) {
-          await vm.securedExec(handler.handler, [block]);
-          //  }
+          await vm.securedExec(handler.handler, [blockContent]);
           break;
-        // case SubqlHandlerKind.Call: {
-        //   const filteredExtrinsics = SubstrateUtil.filterExtrinsics(
-        //     extrinsics,
-        //     handler.filter,
-        //   );
-        //   for (const e of filteredExtrinsics) {
-        //     await vm.securedExec(handler.handler, [e]);
-        //   }
-        //   break;
-        // }
-        // case SubqlHandlerKind.Event: {
-        //   const filteredEvents = SubstrateUtil.filterEvents(
-        //     events,
-        //     handler.filter,
-        //   );
-        //   for (const e of filteredEvents) {
-        //     await vm.securedExec(handler.handler, [e]);
-        //   }
-        //   break;
-        // }
+        case SubqlHandlerKind.Call: {
+          const filteredCalls = blockContent.getCalls(handler.filter);
+          for (const e of filteredCalls) {
+            await vm.securedExec(handler.handler, [e]);
+          }
+          break;
+        }
+        case SubqlHandlerKind.Event: {
+          const filteredEvents = SubstrateUtil.filterEvents(
+            (blockContent as SubstrateBlockWrapped).getEvents(),
+            handler.filter,
+          );
+          for (const e of filteredEvents) {
+            await vm.securedExec(handler.handler, [e]);
+          }
+          break;
+        }
         default:
       }
     }

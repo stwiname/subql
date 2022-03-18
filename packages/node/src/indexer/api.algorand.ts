@@ -70,6 +70,6 @@ export class AlgorandBlockWrapped implements BlockWrapper {
   }
 
   getHash(): string {
-    return '1'; // TODO
+    return this.block.prev.toString('hex'); // TODO
   }
 }

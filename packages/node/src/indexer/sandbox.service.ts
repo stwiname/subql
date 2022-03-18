@@ -4,7 +4,7 @@
 import path from 'path';
 import { Injectable } from '@nestjs/common';
 import { isRuntimeDataSourceV0_2_0, levelFilter } from '@subql/common';
-import { Store, SubqlDatasource } from '@subql/types';
+import { ApiWrapper, Store, SubqlDatasource } from '@subql/types';
 import { NodeVM, NodeVMOptions, VMScript } from '@subql/x-vm2';
 import { merge } from 'lodash';
 import { NodeConfig } from '../configure/NodeConfig';
@@ -132,6 +132,26 @@ export class SandboxService {
     if (argv.unsafe) {
       processor.freeze(this.apiService.getApi(), 'unsafeApi');
     }
+    return processor;
+  }
+
+  getDsProcessorWrapper(ds: SubqlProjectDs, api: ApiWrapper): IndexerSandbox {
+    const entry = this.getDataSourceEntry(ds);
+    let processor = this.processorCache[entry];
+    if (!processor) {
+      processor = new IndexerSandbox(
+        {
+          // api: await this.apiService.getPatchedApi(),
+          store: this.storeService.getStore(),
+          root: this.project.root,
+          script: ds.mapping.entryScript,
+          entry,
+        },
+        this.nodeConfig,
+      );
+      this.processorCache[entry] = processor;
+    }
+    processor.freeze(api, 'api');
     return processor;
   }
 

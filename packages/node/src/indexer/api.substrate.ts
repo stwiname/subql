@@ -15,11 +15,15 @@ import {
   RegisteredTypes,
 } from '@polkadot/types/types';
 import { ProjectNetworkConfig } from '@subql/common';
-import { SubstrateBlock, ApiWrapper, BlockWrapper } from '@subql/types';
 import {
+  SubstrateBlock,
+  ApiWrapper,
+  BlockWrapper,
+  SubstrateBlockWrapper,
   SubstrateExtrinsic,
   SubstrateEvent,
-} from '../../../types/dist/interfaces';
+  SubqlCallFilter,
+} from '@subql/types';
 import { profiler, profilerWrap } from '../utils/profiler';
 import * as SubstrateUtil from '../utils/substrate';
 import { getYargsOption } from '../yargs';
@@ -66,7 +70,6 @@ export class SubstrateApi implements ApiWrapper {
     this.eventEmitter.emit(IndexerEvent.ApiConnected, { value: 1 });
 
     this.client.on('connected', () => {
-      console.log('connected');
       this.eventEmitter.emit(IndexerEvent.ApiConnected, { value: 1 });
     });
     this.client.on('disconnected', () => {
@@ -230,7 +233,7 @@ export class SubstrateApi implements ApiWrapper {
   }
 }
 
-export class SubstrateBlockWrapped implements BlockWrapper {
+export class SubstrateBlockWrapped implements SubstrateBlockWrapper {
   constructor(
     private block: SubstrateBlock,
     private extrinsics: SubstrateExtrinsic[],
@@ -247,6 +250,10 @@ export class SubstrateBlockWrapped implements BlockWrapper {
 
   getHash(): string {
     return this.block.block.header.hash.toHex();
+  }
+
+  getCalls(filter?: SubqlCallFilter): SubstrateExtrinsic[] {
+    return SubstrateUtil.filterExtrinsics(this.extrinsics, filter);
   }
 
   /****************************************************/

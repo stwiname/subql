@@ -34,7 +34,6 @@ export interface ProjectManifestV0_3_0 extends IProjectManifest {
 
   network: {
     genesisHash: string;
-    connectionChain: string;
     endpoint?: string;
     dictionary?: string;
     chaintypes?: {
