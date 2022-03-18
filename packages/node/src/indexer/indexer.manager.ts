@@ -457,16 +457,11 @@ export class IndexerManager {
     for (const handler of handlers) {
       switch (handler.kind) {
         case SubqlHandlerKind.Block:
-          //  if (SubstrateUtil.filterBlock(block, handler.filter)) {
           await vm.securedExec(handler.handler, [blockContent]);
-          //  }
           break;
         case SubqlHandlerKind.Call: {
-          const filteredExtrinsics = SubstrateUtil.filterExtrinsics(
-            (blockContent as SubstrateBlockWrapped).getExtrinsincs(),
-            handler.filter,
-          );
-          for (const e of filteredExtrinsics) {
+          const filteredCalls = blockContent.getCalls(handler.filter);
+          for (const e of filteredCalls) {
             await vm.securedExec(handler.handler, [e]);
           }
           break;

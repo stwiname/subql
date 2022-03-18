@@ -6,6 +6,8 @@ import {
   AvalancheBlock,
   BlockWrapper,
   AvalancheBlockWrapper,
+  AvalancheTransaction,
+  SubqlCallFilter,
 } from '@subql/types';
 import { Avalanche, BinTools } from 'avalanche';
 import { EVMAPI } from 'avalanche/dist/apis/evm';
@@ -54,7 +56,6 @@ export class AvalancheApi implements ApiWrapper {
         '/ext/bc/C/rpc',
       )
     ).data.result;
-    console.log(this.genesisBlock);
   }
 
   getGenesisHash(): string {
@@ -118,6 +119,13 @@ export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
 
   getHash(): string {
     return this.block.hash;
+  }
+
+  getCalls(filter?: SubqlCallFilter): AvalancheTransaction[] {
+    if (this.block?.transactions?.length) {
+      console.log(Object.keys(this.block.transactions[0]));
+    }
+    return this.block.transactions;
   }
 
   /****************************************************/

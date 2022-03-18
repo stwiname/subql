@@ -22,6 +22,7 @@ import {
   SubstrateBlockWrapper,
   SubstrateExtrinsic,
   SubstrateEvent,
+  SubqlCallFilter,
 } from '@subql/types';
 import { profiler, profilerWrap } from '../utils/profiler';
 import * as SubstrateUtil from '../utils/substrate';
@@ -249,6 +250,10 @@ export class SubstrateBlockWrapped implements SubstrateBlockWrapper {
 
   getHash(): string {
     return this.block.block.header.hash.toHex();
+  }
+
+  getCalls(filter?: SubqlCallFilter): SubstrateExtrinsic[] {
+    return SubstrateUtil.filterExtrinsics(this.extrinsics, filter);
   }
 
   /****************************************************/
