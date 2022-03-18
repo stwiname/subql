@@ -122,8 +122,6 @@ export class IndexerManager {
 
     let poiBlockHash: Uint8Array;
     try {
-      // if parentBlockHash injected, which means we need to check runtime upgrade
-
       // Run predefined data sources
       for (const ds of this.filteredDataSources) {
         await this.indexBlockForDs(ds, blockContent, blockHeight, tx);
