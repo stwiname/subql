@@ -122,10 +122,28 @@ export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
   }
 
   getCalls(filter?: SubqlCallFilter): AvalancheTransaction[] {
-    if (this.block?.transactions?.length) {
-      console.log(Object.keys(this.block.transactions[0]));
+    const transactions = this.block.transactions.filter((t) =>
+      this.filterProcessor(t, filter),
+    );
+    return transactions;
+  }
+
+  private filterProcessor(
+    transaction: AvalancheTransaction,
+    filter?: SubqlCallFilter,
+  ): boolean {
+    const { from, to } = transaction;
+    if (
+      filter?.from &&
+      from &&
+      filter.from.toLowerCase() !== from?.toLowerCase()
+    ) {
+      return false;
     }
-    return this.block.transactions;
+    if (filter?.to && to && filter.to.toLowerCase() !== to.toLowerCase()) {
+      return false;
+    }
+    return true;
   }
 
   /****************************************************/

@@ -65,6 +65,8 @@ export interface SubqlEventFilter extends SubqlBaseHandlerFilter {
 
 export interface SubqlCallFilter extends SubqlEventFilter {
   success?: boolean;
+  from?: string;
+  to?: string;
 }
 
 export interface SubqlBlockHandler {
