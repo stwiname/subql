@@ -97,10 +97,16 @@ export class AvalancheApi implements ApiWrapper {
           [`0x${num.toString(16)}`, true],
           '/ext/bc/C/rpc',
         );
-        const logs_promise = this.cchain.callMethod('eth_getlogs', [
-          { fromBlock: num, toBlock: num },
+        const logs_promise = this.cchain.callMethod(
+          'eth_getLogs',
+          [
+            {
+              fromBlock: `0x${num.toString(16)}`,
+              toBlock: `0x${num.toString(16)}`,
+            },
+          ],
           '/ext/bc/C/rpc',
-        ]);
+        );
         return new AvalancheBlockWrapped(
           (await block_promise).data.result,
           (await logs_promise).data.result,
