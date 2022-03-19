@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {Extrinsic, EventRecord, SignedBlock} from '@polkadot/types/interfaces';
-import {Log} from 'web3-core';
+import {Log, Transaction} from 'web3-core';
+import {BlockTransactionObject} from 'web3-eth';
 import {SubqlCallFilter} from './project';
 
 export interface Entity {
@@ -47,9 +48,9 @@ export interface SubstrateEvent extends EventRecord {
 
 export type AlgorandBlock = Record<string, any>;
 
-export type AvalancheBlock = Record<string, any>;
+export type AvalancheBlock = BlockTransactionObject;
 
-export type AvalancheTransaction = Record<string, any>;
+export type AvalancheTransaction = Transaction;
 
 export type AvalancheEvent = Log;
 
