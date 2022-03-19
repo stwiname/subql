@@ -161,7 +161,7 @@ export class IndexerManager {
     }
     await tx.commit();
     this.fetchService.latestProcessed(blockContent.getBlockHeight());
-    this.prevSpecVersion = block.specVersion;
+    this.prevSpecVersion = blockContent.getVersion();
     if (this.nodeConfig.proofOfIndex) {
       this.poiService.setLatestPoiBlockHash(poiBlockHash);
     }

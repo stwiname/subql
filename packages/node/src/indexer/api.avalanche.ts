@@ -1,7 +1,6 @@
 // Copyright 2020-2022 OnFinality Limited authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { filterCallsSome } from '@polkadot/types/metadata/decorate';
 import {
   ApiWrapper,
   AvalancheBlock,
@@ -128,6 +127,10 @@ export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
 
   getEvents(): AvalancheEvent[] {
     return this.logs;
+  }
+
+  getVersion(): number {
+    return undefined; // TODO
   }
 
   getCalls(filter?: SubqlCallFilter): AvalancheTransaction[] {

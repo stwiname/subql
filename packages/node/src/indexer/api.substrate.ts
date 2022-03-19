@@ -252,6 +252,14 @@ export class SubstrateBlockWrapped implements SubstrateBlockWrapper {
     return this.block.block.header.hash.toHex();
   }
 
+  getEvents(): SubstrateEvent[] {
+    return this.events;
+  }
+
+  getVersion(): number {
+    return this.block.specVersion;
+  }
+
   getCalls(filter?: SubqlCallFilter): SubstrateExtrinsic[] {
     return SubstrateUtil.filterExtrinsics(this.extrinsics, filter);
   }
@@ -262,9 +270,5 @@ export class SubstrateBlockWrapped implements SubstrateBlockWrapper {
 
   getExtrinsincs(): SubstrateExtrinsic[] {
     return this.extrinsics;
-  }
-
-  getEvents(): SubstrateEvent[] {
-    return this.events;
   }
 }

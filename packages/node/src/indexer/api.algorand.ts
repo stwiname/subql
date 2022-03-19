@@ -4,11 +4,11 @@
 import {
   AlgorandBlock,
   ApiWrapper,
+  AvalancheEvent,
   BlockWrapper,
   SubstrateEvent,
 } from '@subql/types';
 import algosdk from 'algosdk';
-import { Log } from 'web3-core';
 import { AlgorandOptions } from './types';
 
 export class AlgorandApi implements ApiWrapper {
@@ -79,7 +79,11 @@ export class AlgorandBlockWrapped implements BlockWrapper {
     return this.block.prev.toString('hex'); // TODO
   }
 
-  getEvents(): SubstrateEvent[] | Log[] {
+  getEvents(): SubstrateEvent[] | AvalancheEvent[] {
     return []; // TODO
+  }
+
+  getVersion(): number {
+    return undefined; // TODO
   }
 }
