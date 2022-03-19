@@ -140,6 +140,10 @@ export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
   }
 
   getCalls(filter?: SubqlCallFilter): AvalancheTransaction[] {
+    if (!filter) {
+      return this.block.transactions;
+    }
+
     const transactions = this.block.transactions.filter((t) =>
       this.filterProcessor(t, filter),
     );
@@ -148,19 +152,15 @@ export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
 
   private filterProcessor(
     transaction: AvalancheTransaction,
-    filter?: SubqlCallFilter,
+    filter: SubqlCallFilter,
   ): boolean {
-    const { from, to } = transaction;
-    if (
-      filter?.from &&
-      from &&
-      filter.from.toLowerCase() !== from?.toLowerCase()
-    ) {
+    if (filter.to && filter.to !== transaction.to) {
       return false;
     }
-    if (filter?.to && to && filter.to.toLowerCase() !== to.toLowerCase()) {
+    if (filter.from && filter.from !== transaction.from) {
       return false;
     }
+
     return true;
   }
 
