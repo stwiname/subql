@@ -1,9 +1,11 @@
 // Copyright 2020-2022 OnFinality Limited authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
+import { filterCallsSome } from '@polkadot/types/metadata/decorate';
 import {
   ApiWrapper,
   AvalancheBlock,
+  AvalancheEvent,
   BlockWrapper,
   AvalancheBlockWrapper,
   AvalancheTransaction,
@@ -90,24 +92,27 @@ export class AvalancheApi implements ApiWrapper {
 
   async fetchBlocks(bufferBlocks: number[]): Promise<BlockWrapper[]> {
     return Promise.all(
-      bufferBlocks.map(
-        async (num) =>
-          new AvalancheBlockWrapped(
-            (
-              await this.cchain.callMethod(
-                'eth_getBlockByNumber',
-                [`0x${num.toString(16)}`, true],
-                '/ext/bc/C/rpc',
-              )
-            ).data.result,
-          ),
-      ),
+      bufferBlocks.map(async (num) => {
+        const block_promise = this.cchain.callMethod(
+          'eth_getBlockByNumber',
+          [`0x${num.toString(16)}`, true],
+          '/ext/bc/C/rpc',
+        );
+        const logs_promise = this.cchain.callMethod('eth_getlogs', [
+          { fromBlock: num, toBlock: num },
+          '/ext/bc/C/rpc',
+        ]);
+        return new AvalancheBlockWrapped(
+          (await block_promise).data.result,
+          (await logs_promise).data.result,
+        );
+      }),
     );
   }
 }
 
 export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
-  constructor(private block: AvalancheBlock) {}
+  constructor(private block: AvalancheBlock, private logs: AvalancheEvent[]) {}
 
   getBlock(): AvalancheBlock {
     return this.block;
@@ -119,6 +124,10 @@ export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
 
   getHash(): string {
     return this.block.hash;
+  }
+
+  getEvents(): AvalancheEvent[] {
+    return this.logs;
   }
 
   getCalls(filter?: SubqlCallFilter): AvalancheTransaction[] {

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {Extrinsic, EventRecord, SignedBlock} from '@polkadot/types/interfaces';
+import {Log} from 'web3-core';
 import {SubqlCallFilter} from './project';
 
 export interface Entity {
@@ -50,11 +51,14 @@ export type AvalancheBlock = Record<string, any>;
 
 export type AvalancheTransaction = Record<string, any>;
 
+export type AvalancheEvent = Log;
+
 export interface BlockWrapper {
   getBlock: () => SubstrateBlock | AlgorandBlock | AvalancheBlock;
   getBlockHeight: () => number;
   getHash: () => string;
   getCalls?: (filters?: SubqlCallFilter) => SubstrateExtrinsic[] | AvalancheTransaction[];
+  getEvents: () => SubstrateEvent[] | AvalancheEvent[];
 }
 
 export interface ApiWrapper {
@@ -74,7 +78,6 @@ export interface AvalancheBlockWrapper extends BlockWrapper {
 
 export interface SubstrateBlockWrapper extends BlockWrapper {
   getExtrinsincs: () => SubstrateExtrinsic[];
-  getEvents: () => SubstrateEvent[];
 }
 
 export type DynamicDatasourceCreator = (name: string, args: Record<string, unknown>) => Promise<void>;
