@@ -45,6 +45,8 @@ export interface SubstrateEvent extends EventRecord {
 }
 
 export type AlgorandBlock = Record<string, any>;
+export type AlgorandTransaction = Record<string, any>; // TODO
+export type AlgorandEvent = Record<string, any>; // TODO
 
 export type AvalancheBlock = {
   difficulty: string;
@@ -97,32 +99,48 @@ export type AvalancheEvent = {
   topics: string[];
 };
 
-export interface BlockWrapper {
-  getBlock: () => SubstrateBlock | AlgorandBlock | AvalancheBlock;
-  getBlockHeight: () => number;
-  getHash: () => string;
-  getCalls?: (filters?: SubqlCallFilter) => SubstrateExtrinsic[] | AvalancheTransaction[];
-  getEvents: () => SubstrateEvent[] | AvalancheEvent[];
-  getVersion: () => number;
+export interface BlockWrapper<
+  B extends SubstrateBlock | AlgorandBlock | AvalancheBlock = SubstrateBlock | AlgorandBlock | AvalancheBlock,
+  C extends SubstrateExtrinsic | AlgorandTransaction | AvalancheTransaction =
+    | SubstrateExtrinsic
+    | AlgorandTransaction
+    | AvalancheTransaction,
+  E extends SubstrateEvent | AlgorandEvent | AvalancheEvent = SubstrateEvent | AlgorandEvent | AvalancheEvent
+> {
+  block: B;
+  blockHeight: number;
+  specVersion?: number;
+  hash: string;
+  calls?: (filters?: SubqlCallFilter) => C[];
+  events?: E[];
 }
 
-export interface ApiWrapper {
+export interface ApiWrapper<
+  B extends SubstrateBlock | AlgorandBlock | AvalancheBlock = SubstrateBlock | AlgorandBlock | AvalancheBlock,
+  C extends SubstrateExtrinsic | AvalancheTransaction | AlgorandTransaction =
+    | SubstrateExtrinsic
+    | AvalancheTransaction
+    | AlgorandTransaction,
+  E extends SubstrateEvent | AvalancheEvent | AlgorandEvent = SubstrateEvent | AvalancheEvent | AlgorandEvent
+> {
   init: () => Promise<void>;
   getGenesisHash: () => string;
   getRuntimeChain: () => string;
   getSpecName: () => string;
   getFinalizedBlockHeight: () => Promise<number>;
   getLastHeight: () => Promise<number>;
-  fetchBlocks: (bufferBlocks: number[]) => Promise<BlockWrapper[]>;
+  fetchBlocks: (bufferBlocks: number[]) => Promise<BlockWrapper<B, C, E>[]>;
 }
 
-export interface AvalancheBlockWrapper extends BlockWrapper {
+export interface AvalancheBlockWrapper extends BlockWrapper<AvalancheBlock, AvalancheTransaction, AvalancheEvent> {
   get: (objects: string[]) => Record<string, any>;
   getTransactions: (filters?: string[]) => Record<string, any>;
 }
 
-export interface SubstrateBlockWrapper extends BlockWrapper {
-  getExtrinsincs: () => SubstrateExtrinsic[];
+export type AlgorandBlockWrapper = BlockWrapper<AlgorandBlock, AlgorandTransaction, AlgorandEvent>;
+
+export interface SubstrateBlockWrapper extends BlockWrapper<SubstrateBlock, SubstrateExtrinsic, SubstrateEvent> {
+  extrinsics: SubstrateExtrinsic[];
 }
 
 export type DynamicDatasourceCreator = (name: string, args: Record<string, unknown>) => Promise<void>;

@@ -5,7 +5,6 @@ import {
   ApiWrapper,
   AvalancheBlock,
   AvalancheEvent,
-  BlockWrapper,
   AvalancheBlockWrapper,
   AvalancheTransaction,
   SubqlCallFilter,
@@ -15,7 +14,9 @@ import { EVMAPI } from 'avalanche/dist/apis/evm';
 import { IndexAPI } from 'avalanche/dist/apis/index';
 import { AvalancheOptions } from './types';
 
-export class AvalancheApi implements ApiWrapper {
+export class AvalancheApi
+  implements ApiWrapper<AvalancheBlock, AvalancheTransaction, AvalancheEvent>
+{
   private client: Avalanche;
   private indexApi: IndexAPI;
   private genesisBlock: Record<string, any>;
@@ -89,7 +90,7 @@ export class AvalancheApi implements ApiWrapper {
     return lastHeight;
   }
 
-  async fetchBlocks(bufferBlocks: number[]): Promise<BlockWrapper[]> {
+  async fetchBlocks(bufferBlocks: number[]): Promise<AvalancheBlockWrapper[]> {
     return Promise.all(
       bufferBlocks.map(async (num) => {
         const block_promise = this.cchain.callMethod(
@@ -117,33 +118,27 @@ export class AvalancheApi implements ApiWrapper {
 }
 
 export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
-  constructor(private block: AvalancheBlock, private logs: AvalancheEvent[]) {}
+  constructor(
+    private _block: AvalancheBlock,
+    private _logs: AvalancheEvent[],
+  ) {}
 
-  getBlock(): AvalancheBlock {
-    return this.block;
+  get block(): AvalancheBlock {
+    return this._block;
   }
 
-  getBlockHeight(): number {
+  get blockHeight(): number {
     return parseInt(this.block.number);
   }
 
-  getHash(): string {
+  get hash(): string {
     return this.block.hash;
   }
 
-  getEvents(): AvalancheEvent[] {
-    return this.logs;
-  }
-
-  getVersion(): number {
-    return undefined; // TODO
-  }
-
-  getCalls(filter?: SubqlCallFilter): AvalancheTransaction[] {
+  calls(filter?: SubqlCallFilter): AvalancheTransaction[] {
     if (!filter) {
       return this.block.transactions;
     }
-
     const transactions = this.block.transactions.filter((t) =>
       this.filterProcessor(t, filter),
     );

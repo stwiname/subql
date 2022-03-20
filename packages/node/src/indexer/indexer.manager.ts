@@ -111,8 +111,7 @@ export class IndexerManager {
 
   @profiler(argv.profiler)
   async indexBlock(blockContent: BlockWrapper): Promise<void> {
-    const block = blockContent.getBlock();
-    const blockHeight = blockContent.getBlockHeight();
+    const { block, blockHeight } = blockContent;
     this.eventEmitter.emit(IndexerEvent.BlockProcessing, {
       height: blockHeight,
       timestamp: Date.now(),
@@ -146,7 +145,7 @@ export class IndexerManager {
         if (!u8aEq(operationHash, NULL_MERKEL_ROOT)) {
           const poiBlock = PoiBlock.create(
             blockHeight,
-            blockContent.getHash(),
+            blockContent.hash,
             operationHash,
             await this.poiService.getLatestPoiBlockHash(),
             this.project.id,
@@ -160,8 +159,9 @@ export class IndexerManager {
       throw e;
     }
     await tx.commit();
-    this.fetchService.latestProcessed(blockContent.getBlockHeight());
-    this.prevSpecVersion = blockContent.getVersion();
+
+    this.fetchService.latestProcessed(blockContent.blockHeight);
+    this.prevSpecVersion = blockContent.specVersion;
     if (this.nodeConfig.proofOfIndex) {
       this.poiService.setLatestPoiBlockHash(poiBlockHash);
     }
@@ -458,7 +458,7 @@ export class IndexerManager {
           await vm.securedExec(handler.handler, [blockContent]);
           break;
         case SubqlHandlerKind.Call: {
-          const filteredCalls = blockContent.getCalls(handler.filter);
+          const filteredCalls = blockContent.calls(handler.filter);
           for (const e of filteredCalls) {
             await vm.securedExec(handler.handler, [e]);
           }
@@ -466,7 +466,7 @@ export class IndexerManager {
         }
         case SubqlHandlerKind.Event: {
           const filteredEvents = SubstrateUtil.filterEvents(
-            (blockContent as SubstrateBlockWrapped).getEvents(),
+            (blockContent as SubstrateBlockWrapped).events,
             handler.filter,
           );
           for (const e of filteredEvents) {
@@ -486,9 +486,9 @@ export class IndexerManager {
   ): Promise<void> {
     if (this.project.network.type === 'substrate') {
       const substrateBlockContent = blockContent as SubstrateBlockWrapped;
-      const block = substrateBlockContent.getBlock();
-      const extrinsics = substrateBlockContent.getExtrinsincs();
-      const events = substrateBlockContent.getEvents();
+      const block = substrateBlockContent.block;
+      const extrinsics = substrateBlockContent.extrinsics;
+      const events = substrateBlockContent.events;
       const plugin = this.dsProcessorService.getDsProcessor(ds);
       const assets = await this.dsProcessorService.getAssets(ds);
 
