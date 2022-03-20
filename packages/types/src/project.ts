@@ -19,7 +19,7 @@ export enum SubqlDatasourceKind {
 export enum SubqlHandlerKind {
   Block = 'BlockHandler',
   Call = 'CallHandler',
-  Event = 'substrate/EventHandler',
+  Event = 'EventHandler',
 }
 
 export type RuntimeHandlerInputMap = {
