@@ -160,51 +160,72 @@ export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
 
   private filterCallProcessor(
     transaction: AvalancheTransaction,
-    filter?: AvalancheCallFilter,
+    filter: AvalancheCallFilter | AvalancheCallFilter[],
   ): boolean {
-    if (!filter) {
+    let filters: AvalancheCallFilter[];
+    if (!(filter instanceof Array)) {
+      filters = [filter];
+    } else {
+      filters = filter as AvalancheCallFilter[];
+    }
+    if (!filters.length) {
       return true;
     }
+    return Boolean(
+      filters.find((filt) => {
+        if (filt.to && !stringNormalizedEq(filt.to, transaction.to)) {
+          return false;
+        }
+        if (filt.from && !stringNormalizedEq(filt.from, transaction.from)) {
+          return false;
+        }
 
-    if (filter.to && stringNormalizedEq(filter.to, transaction.to)) {
-      return false;
-    }
-    if (filter.from && stringNormalizedEq(filter.from, transaction.from)) {
-      return false;
-    }
-
-    if (
-      filter.function &&
-      transaction.input.indexOf(functionToSighash(filter.function)) !== 0
-    ) {
-      return false;
-    }
-
-    return true;
+        if (
+          filt.function &&
+          transaction.input.indexOf(functionToSighash(filt.function)) !== 0
+        ) {
+          return false;
+        }
+        return true;
+      }),
+    );
   }
 
   private filterEventsProcessor(
     log: AvalancheEvent,
-    filter?: AvalancheEventFilter,
+    filter: AvalancheEventFilter | AvalancheEventFilter[],
   ): boolean {
-    if (filter.address && !stringNormalizedEq(filter.address, log.address)) {
-      return false;
+    let filters: AvalancheEventFilter[];
+    if (!(filter instanceof Array)) {
+      filters = [filter];
+    } else {
+      filters = filter as AvalancheEventFilter[];
     }
-
-    if (filter?.topics) {
-      for (let i = 0; i < Math.min(filter.topics.length, 4); i++) {
-        const topic = filter.topics[i];
-        if (!topic) {
-          continue;
-        }
-
-        if (!hexStringEq(eventToTopic(topic), log.topics[i])) {
+    if (!filters.length) {
+      return true;
+    }
+    return Boolean(
+      filters.find((filt) => {
+        if (filt.address && !stringNormalizedEq(filt.address, log.address)) {
           return false;
         }
-      }
-    }
 
-    return true;
+        if (filt.topics) {
+          for (let i = 0; i < Math.min(filt.topics.length, 4); i++) {
+            const topic = filt.topics[i];
+            if (!topic) {
+              continue;
+            }
+
+            if (!hexStringEq(eventToTopic(topic), log.topics[i])) {
+              return false;
+            }
+          }
+        }
+        console.log(true);
+        return true;
+      }),
+    );
   }
 
   /****************************************************/
