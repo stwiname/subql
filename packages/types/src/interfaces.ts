@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {Extrinsic, EventRecord, SignedBlock} from '@polkadot/types/interfaces';
-import {SubqlCallFilter} from './project';
+import {SubqlCallFilter, SubqlEventFilter} from './project';
 
 export interface Entity {
   id: string;
@@ -44,7 +44,20 @@ export interface SubstrateEvent extends EventRecord {
   block: SubstrateBlock;
 }
 
+export interface AvalancheCallFilter {
+  from?: string;
+  to?: string;
+  function?: string;
+}
+
+export interface AvalancheEventFilter {
+  address?: string;
+  topics?: Array<string | null | undefined>;
+}
+
 export type AlgorandBlock = Record<string, any>;
+export type AlgorandTransaction = Record<string, any>; // TODO
+export type AlgorandEvent = Record<string, any>; // TODO
 
 export type AvalancheBlock = {
   difficulty: string;
@@ -97,32 +110,52 @@ export type AvalancheEvent = {
   topics: string[];
 };
 
-export interface BlockWrapper {
-  getBlock: () => SubstrateBlock | AlgorandBlock | AvalancheBlock;
-  getBlockHeight: () => number;
-  getHash: () => string;
-  getCalls?: (filters?: SubqlCallFilter) => SubstrateExtrinsic[] | AvalancheTransaction[];
-  getEvents: () => SubstrateEvent[] | AvalancheEvent[];
-  getVersion: () => number;
+export interface BlockWrapper<
+  B extends SubstrateBlock | AlgorandBlock | AvalancheBlock = SubstrateBlock | AlgorandBlock | AvalancheBlock,
+  C extends SubstrateExtrinsic | AlgorandTransaction | AvalancheTransaction =
+    | SubstrateExtrinsic
+    | AlgorandTransaction
+    | AvalancheTransaction,
+  E extends SubstrateEvent | AlgorandEvent | AvalancheEvent = SubstrateEvent | AlgorandEvent | AvalancheEvent,
+  CF extends SubqlCallFilter | AvalancheCallFilter = SubqlCallFilter | AvalancheCallFilter,
+  EF extends SubqlEventFilter | AvalancheEventFilter = SubqlEventFilter | AvalancheEventFilter
+> {
+  block: B;
+  blockHeight: number;
+  specVersion?: number;
+  hash: string;
+  calls?: (filters?: CF | CF[]) => C[];
+  events?: (filters?: EF | EF[]) => E[];
 }
 
-export interface ApiWrapper {
+export interface ApiWrapper<
+  BW extends BlockWrapper = SubstrateBlockWrapper | AvalancheBlockWrapper | AlgorandBlockWrapper
+> {
   init: () => Promise<void>;
   getGenesisHash: () => string;
   getRuntimeChain: () => string;
   getSpecName: () => string;
   getFinalizedBlockHeight: () => Promise<number>;
   getLastHeight: () => Promise<number>;
-  fetchBlocks: (bufferBlocks: number[]) => Promise<BlockWrapper[]>;
+  fetchBlocks: (bufferBlocks: number[]) => Promise<BW[]>;
 }
 
-export interface AvalancheBlockWrapper extends BlockWrapper {
+export interface AvalancheBlockWrapper
+  extends BlockWrapper<
+    AvalancheBlock,
+    AvalancheTransaction,
+    AvalancheEvent,
+    AvalancheCallFilter,
+    AvalancheEventFilter
+  > {
   get: (objects: string[]) => Record<string, any>;
   getTransactions: (filters?: string[]) => Record<string, any>;
 }
 
-export interface SubstrateBlockWrapper extends BlockWrapper {
-  getExtrinsincs: () => SubstrateExtrinsic[];
+export type AlgorandBlockWrapper = BlockWrapper<AlgorandBlock, AlgorandTransaction, AlgorandEvent>;
+
+export interface SubstrateBlockWrapper extends BlockWrapper<SubstrateBlock, SubstrateExtrinsic, SubstrateEvent> {
+  extrinsics: SubstrateExtrinsic[];
 }
 
 export type DynamicDatasourceCreator = (name: string, args: Record<string, unknown>) => Promise<void>;

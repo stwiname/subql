@@ -48,7 +48,7 @@ export function profiler(enabled = true): any {
 
 export const profilerWrap =
   (method: any, target: any, name: string): any =>
-  (...args) => {
+  (...args: any[]) => {
     const start = new Date();
     const res = method(...args);
     if (isPromise(res)) {

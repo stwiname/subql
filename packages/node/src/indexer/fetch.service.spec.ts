@@ -4,9 +4,11 @@
 import path from 'path';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
+  BlockWrapper,
   SubqlDatasourceKind,
   SubqlHandlerKind,
   SubqlMapping,
+  SubstrateBlock,
 } from '@subql/types';
 import { GraphQLSchema } from 'graphql';
 import { NodeConfig } from '../configure/NodeConfig';
@@ -293,11 +295,11 @@ describe('FetchService', () => {
       project,
       batchSize,
     );
-    fetchService.fetchMeta = jest.fn();
+    // apiService.fetchMeta = jest.fn();
     await fetchService.init();
     const loopPromise = fetchService.startLoop(1);
     // eslint-disable-next-line @typescript-eslint/require-await
-    fetchService.register(async (content) => {
+    fetchService.register(async (content: BlockWrapper<SubstrateBlock>) => {
       if (content.block.block.header.number.toNumber() === 10) {
         fetchService.onApplicationShutdown();
       }
@@ -409,7 +411,7 @@ describe('FetchService', () => {
       fetchService as any,
       `nextEndBlockHeight`,
     );
-    fetchService.fetchMeta = jest.fn();
+    // fetchService.fetchMeta = jest.fn();
     (fetchService as any).latestFinalizedHeight = 16000;
     (fetchService as any).latestBufferedHeight = undefined;
     (fetchService as any).latestProcessedHeight = undefined;
@@ -505,7 +507,7 @@ describe('FetchService', () => {
 
     const loopPromise = fetchService.startLoop(1);
     // eslint-disable-next-line @typescript-eslint/require-await
-    fetchService.register(async (content) => {
+    fetchService.register(async (content: BlockWrapper<SubstrateBlock>) => {
       if (content.block.block.header.number.toNumber() === 10) {
         fetchService.onApplicationShutdown();
       }

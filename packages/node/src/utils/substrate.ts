@@ -176,6 +176,14 @@ export function filterEvents(
   );
 }
 
+// TODO: prefetch all known runtime upgrades at once
+export async function prefetchMetadata(
+  api: ApiPromise,
+  hash: BlockHash,
+): Promise<void> {
+  await api.getBlockRegistry(hash);
+}
+
 /**
  *
  * @param api

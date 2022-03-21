@@ -9,6 +9,7 @@ import { GraphQLSchema } from 'graphql';
 import { SubqueryProject } from '../configure/SubqueryProject';
 import { delay } from '../utils/promise';
 import { ApiService } from './api.service';
+import { SubstrateApi } from './api.substrate';
 
 const WS_ENDPOINT = 'wss://kusama.api.onfinality.io/public-ws';
 const HTTP_ENDPOINT = 'https://kusama.api.onfinality.io/public';
@@ -68,11 +69,11 @@ describe('ApiService', () => {
 
   it('can instantiate api', async () => {
     const apiService = await prepareApiService();
-    const api = apiService.getApi();
+    const api = apiService.getApi() as SubstrateApi;
 
-    const apiAt = await api.substrate.at(TEST_BLOCKHASH);
+    const apiAt = await api.getClient().at(TEST_BLOCKHASH);
     apiAt.registry;
-    expect(api.substrate.registry.getDefinition('TestType')).toEqual('u32');
+    expect(api.getClient().registry.getDefinition('TestType')).toEqual('u32');
     // workaround for ending the test immediately (before return of subscribeRuntimeVersion)
     // will cause an unhandled promise rejection and affect the result of next test.
     await delay(0.5);
@@ -80,13 +81,15 @@ describe('ApiService', () => {
 
   it('api query is locked at specified block', async () => {
     const apiService = await prepareApiService();
-    const api = apiService.getApi();
-    const blockhash = await api.substrate.rpc.chain.getBlockHash(1);
-    const validators = await api.query.session.validators.at(blockhash);
+    const api = apiService.getApi() as SubstrateApi;
+    const blockhash = await api.getClient().rpc.chain.getBlockHash(1);
+    const validators = await api
+      .getClient()
+      .query.session.validators.at(blockhash);
     const patchedApi = await apiService.getPatchedApi(blockhash, 1);
     const [patchedValidators, currentValidators] = await Promise.all([
       patchedApi.query.session.validators(),
-      api.query.session.validators(),
+      api.getClient().query.session.validators(),
     ]);
     expect(validators).toMatchObject(patchedValidators);
     expect(patchedValidators).not.toMatchObject(currentValidators);
@@ -94,14 +97,16 @@ describe('ApiService', () => {
 
   it('api query input is double map', async () => {
     const apiService = await prepareApiService();
-    const api = apiService.getApi();
-    const blockhash = await api.substrate.rpc.chain.getBlockHash(6721189);
+    const api = apiService.getApi() as SubstrateApi;
+    const blockhash = await api.getClient().rpc.chain.getBlockHash(6721189);
     const patchedApi = await apiService.getPatchedApi(blockhash, 6721189);
-    const apiResults = await api.query.staking.erasStakers.at(
-      blockhash,
-      2038,
-      `DMkKL7AZw9TkNw2NaBdocmFRGUG8r8T4kdGGcB13fv2LARy`,
-    );
+    const apiResults = await api
+      .getClient()
+      .query.staking.erasStakers.at(
+        blockhash,
+        2038,
+        `DMkKL7AZw9TkNw2NaBdocmFRGUG8r8T4kdGGcB13fv2LARy`,
+      );
     const patchedResult = await patchedApi.query.staking.erasStakers(
       2038,
       `DMkKL7AZw9TkNw2NaBdocmFRGUG8r8T4kdGGcB13fv2LARy`,
@@ -112,15 +117,16 @@ describe('ApiService', () => {
 
   it.skip('api consts is swapped to the specified block', async () => {
     const apiService = await prepareApiService();
-    const api = apiService.getApi();
+    const api = apiService.getApi() as SubstrateApi;
     // upgrade at 4401242 that maxNominatorRewardedPerValidator changed from 256 to 128
     let blockhash: BlockHash;
-    const currentMaxNRPV =
-      api.consts.staking.maxNominatorRewardedPerValidator.toNumber();
+    const currentMaxNRPV = api
+      .getClient()
+      .consts.staking.maxNominatorRewardedPerValidator.toNumber();
     if (currentMaxNRPV === 128) {
-      blockhash = await api.substrate.rpc.chain.getBlockHash(4401242);
+      blockhash = await api.getClient().rpc.chain.getBlockHash(4401242);
     } else {
-      blockhash = await api.substrate.rpc.chain.getBlockHash(4401243);
+      blockhash = await api.getClient().rpc.chain.getBlockHash(4401243);
     }
     const patchedApi = await apiService.getPatchedApi(blockhash, 4401243);
 
@@ -162,10 +168,10 @@ describe('ApiService', () => {
     const account1 = 'E7ncQKp4xayUoUdpraxBjT7NzLoayLJA4TuPcKKboBkJ5GH';
     const account2 = 'F3opxRbN5ZbjJNU511Kj2TLuzFcDq9BGduA9TgiECafpg29';
     const apiService = await prepareApiService();
-    const api = apiService.getApi();
+    const api = apiService.getApi() as SubstrateApi;
     const multiResults = await Promise.all([
-      await api.query.system.account.at(TEST_BLOCKHASH, account1),
-      await api.query.system.account.at(TEST_BLOCKHASH, account2),
+      await api.getClient().query.system.account.at(TEST_BLOCKHASH, account1),
+      await api.getClient().query.system.account.at(TEST_BLOCKHASH, account2),
     ]);
     const patchedApi = await apiService.getPatchedApi(
       TEST_BLOCKHASH,
@@ -174,7 +180,7 @@ describe('ApiService', () => {
     // eslint-disable-next-line @typescript-eslint/promise-function-async
     const [patchedMultiResults, currentMulti] = await Promise.all([
       patchedApi.query.system.account.multi([account1, account2]),
-      api.query.system.account.multi([account1, account2]),
+      api.getClient().query.system.account.multi([account1, account2]),
     ]);
     expect(patchedMultiResults.map((r) => r.toJSON())).toEqual(
       multiResults.map((r) => r.toJSON()),
@@ -186,22 +192,26 @@ describe('ApiService', () => {
 
   it.skip('xxx.xxx.multi with input parameter is a double map', async () => {
     const apiService = await prepareApiService();
-    const api = apiService.getApi();
+    const api = apiService.getApi() as SubstrateApi;
     const patchedApi = await apiService.getPatchedApi(
       TEST_BLOCKHASH,
       TEST_BLOCKNUMBER,
     );
     const multiResults = await Promise.all([
-      await api.query.staking.erasStakers.at(
-        TEST_BLOCKHASH,
-        2038,
-        `DMkKL7AZw9TkNw2NaBdocmFRGUG8r8T4kdGGcB13fv2LARy`,
-      ),
-      await api.query.staking.erasStakers.at(
-        TEST_BLOCKHASH,
-        2038,
-        `HAGcVQikZmEEgBBaChwjTVdwdA53Qopg2AYUtqw738C5kUq`,
-      ),
+      await api
+        .getClient()
+        .query.staking.erasStakers.at(
+          TEST_BLOCKHASH,
+          2038,
+          `DMkKL7AZw9TkNw2NaBdocmFRGUG8r8T4kdGGcB13fv2LARy`,
+        ),
+      await api
+        .getClient()
+        .query.staking.erasStakers.at(
+          TEST_BLOCKHASH,
+          2038,
+          `HAGcVQikZmEEgBBaChwjTVdwdA53Qopg2AYUtqw738C5kUq`,
+        ),
     ]);
     const patchedResult = await patchedApi.query.staking.erasStakers.multi([
       [2038, `DMkKL7AZw9TkNw2NaBdocmFRGUG8r8T4kdGGcB13fv2LARy`],
@@ -213,21 +223,23 @@ describe('ApiService', () => {
   it('api.queryMulti', async () => {
     const account = 'E7ncQKp4xayUoUdpraxBjT7NzLoayLJA4TuPcKKboBkJ5GH';
     const apiService = await prepareApiService();
-    const api = apiService.getApi();
+    const api = apiService.getApi() as SubstrateApi;
     const patchedApi = await apiService.getPatchedApi(
       TEST_BLOCKHASH,
       TEST_BLOCKNUMBER,
     );
 
     const multiResults = await Promise.all([
-      api.query.timestamp.now.at(TEST_BLOCKHASH),
-      await api.query.session.validators.at(TEST_BLOCKHASH),
-      await api.query.system.account.at(TEST_BLOCKHASH, account),
-      await api.query.staking.erasStakers.at(
-        TEST_BLOCKHASH,
-        2038,
-        `HAGcVQikZmEEgBBaChwjTVdwdA53Qopg2AYUtqw738C5kUq`,
-      ),
+      api.getClient().query.timestamp.now.at(TEST_BLOCKHASH),
+      await api.getClient().query.session.validators.at(TEST_BLOCKHASH),
+      await api.getClient().query.system.account.at(TEST_BLOCKHASH, account),
+      await api
+        .getClient()
+        .query.staking.erasStakers.at(
+          TEST_BLOCKHASH,
+          2038,
+          `HAGcVQikZmEEgBBaChwjTVdwdA53Qopg2AYUtqw738C5kUq`,
+        ),
     ]);
 
     const patchedApiResults = await patchedApi.queryMulti([
@@ -247,22 +259,22 @@ describe('ApiService', () => {
 
   it.skip('api.rx.queryMulti is not supported', async () => {
     const apiService = await prepareApiService();
-    const api = apiService.getApi();
+    const api = apiService.getApi() as SubstrateApi;
     const patchedApi = await apiService.getPatchedApi(
       TEST_BLOCKHASH,
       TEST_BLOCKNUMBER,
     );
     expect(() =>
       (patchedApi.rx as any).queryMulti(
-        [api.query.timestamp.now],
-        [api.query.session.validators],
+        [api.getClient().query.timestamp.now],
+        [api.getClient().query.session.validators],
       ),
     ).toThrow(/is not supported/);
   });
 
   it('support .entries', async () => {
     const apiService = await prepareApiService();
-    const api = apiService.getApi();
+    const api = apiService.getApi() as SubstrateApi;
     const patchedApi = await apiService.getPatchedApi(
       TEST_BLOCKHASH,
       TEST_BLOCKNUMBER,
@@ -270,20 +282,20 @@ describe('ApiService', () => {
     const patchedResult = await patchedApi.query.staking.erasStakers.entries(
       2038,
     );
-    const apiAt = await api.substrate.at(TEST_BLOCKHASH);
+    const apiAt = await api.getClient().at(TEST_BLOCKHASH);
     const result = await apiAt.query.staking.erasStakers.entries(2038);
     expect(patchedResult).toEqual(result);
   });
 
   it('support historic api rpc', async () => {
     const apiService = await prepareApiService();
-    const api = apiService.getApi();
+    const api = apiService.getApi() as SubstrateApi;
 
-    const blockhash = await api.substrate.rpc.chain.getBlockHash(4401242);
+    const blockhash = await api.getClient().rpc.chain.getBlockHash(4401242);
     const patchedApi = await apiService.getPatchedApi(blockhash, 4401242);
 
     const b1 = await patchedApi.rpc.chain.getBlock();
-    const apiBlock = await api.substrate.rpc.chain.getBlock(blockhash);
+    const apiBlock = await api.getClient().rpc.chain.getBlock(blockhash);
     const b2 = await patchedApi.rpc.chain.getBlock('0x12312314');
 
     expect(b1.block.hash.toString()).toEqual(blockhash.toString());
@@ -296,13 +308,13 @@ describe('ApiService', () => {
 
   it('successful set block hash when continuous call api.xxx.xxx.at ', async () => {
     const apiService = await prepareApiService();
-    const api = apiService.getApi();
+    const api = apiService.getApi() as SubstrateApi;
 
-    const blockhash1 = await api.substrate.rpc.chain.getBlockHash(1378036);
+    const blockhash1 = await api.getClient().rpc.chain.getBlockHash(1378036);
     let patchedApi = await apiService.getPatchedApi(blockhash1, 1378036);
     const validators1 = await patchedApi.query.session.validators();
 
-    const blockhash2 = await api.substrate.rpc.chain.getBlockHash(1385137);
+    const blockhash2 = await api.getClient().rpc.chain.getBlockHash(1385137);
     patchedApi = await apiService.getPatchedApi(blockhash2, 1385137);
     const validators2 = await patchedApi.query.session.validators();
     // prettier-ignore
@@ -318,8 +330,8 @@ describe('ApiService', () => {
 
   it('support http provider', async () => {
     const apiService = await prepareApiService(HTTP_ENDPOINT);
-    const api = apiService.getApi();
-    const blockhash = await api.substrate.rpc.chain.getBlockHash(1);
+    const api = apiService.getApi() as SubstrateApi;
+    const blockhash = await api.getClient().rpc.chain.getBlockHash(1);
     const patchedApi = await apiService.getPatchedApi(blockhash, 1);
     await expect(patchedApi.query.system.events()).resolves.toHaveLength(2);
   });
@@ -329,10 +341,10 @@ describe('ApiService', () => {
     const apiService = await prepareApiService(
       'wss://moonbeam-alpha.api.onfinality.io/public-ws',
     );
-    const api = apiService.getApi();
+    const api = apiService.getApi() as SubstrateApi;
 
     const blockNumber = 1545235;
-    const blockhash = await api.substrate.rpc.chain.getBlockHash(blockNumber);
+    const blockhash = await api.getClient().rpc.chain.getBlockHash(blockNumber);
     const patchedApi = await apiService.getPatchedApi(blockhash, blockNumber);
 
     /* Block number should be ignored and `blockNumber` above used */

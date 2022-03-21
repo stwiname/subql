@@ -6,8 +6,10 @@ import { ApiPromise, HttpProvider, WsProvider } from '@polkadot/api';
 import {
   ApiInterfaceEvents,
   ApiOptions,
+  DecoratedRpc,
   RpcMethodResult,
 } from '@polkadot/api/types';
+import { RpcInterface } from '@polkadot/rpc-core/types';
 import { BlockHash, RuntimeVersion } from '@polkadot/types/interfaces';
 import {
   AnyFunction,
@@ -18,11 +20,11 @@ import { ProjectNetworkConfig } from '@subql/common';
 import {
   SubstrateBlock,
   ApiWrapper,
-  BlockWrapper,
   SubstrateBlockWrapper,
   SubstrateExtrinsic,
   SubstrateEvent,
   SubqlCallFilter,
+  SubqlEventFilter,
 } from '@subql/types';
 import { profiler, profilerWrap } from '../utils/profiler';
 import * as SubstrateUtil from '../utils/substrate';
@@ -34,7 +36,7 @@ const NOT_SUPPORT = (name: string) => () => {
   throw new Error(`${name}() is not supported`);
 };
 
-export class SubstrateApi implements ApiWrapper {
+export class SubstrateApi implements ApiWrapper<SubstrateBlockWrapper> {
   private client: ApiPromise;
   private currentBlockHash: string;
   private currentBlockNumber: number;
@@ -105,7 +107,7 @@ export class SubstrateApi implements ApiWrapper {
     return lastHeight;
   }
 
-  async fetchBlocks(bufferBlocks: number[]): Promise<BlockWrapper[]> {
+  async fetchBlocks(bufferBlocks: number[]): Promise<SubstrateBlockWrapper[]> {
     const { argv } = getYargsOption();
 
     const fetchBlocksProfiled = argv.profiler
@@ -164,13 +166,14 @@ export class SubstrateApi implements ApiWrapper {
 
   private patchApiRpc(api: ApiPromise, apiAt: ApiAt): void {
     apiAt.rpc = Object.entries(api.rpc).reduce((acc, [module, rpcMethods]) => {
-      acc[module] = Object.entries(rpcMethods).reduce(
-        (accInner, [name, rpcPromiseResult]) => {
-          accInner[name] = this.redecorateRpcFunction(rpcPromiseResult);
-          return accInner;
-        },
-        {},
-      );
+      acc[module as keyof DecoratedRpc<'promise', RpcInterface>] =
+        Object.entries(rpcMethods).reduce(
+          (accInner, [name, rpcPromiseResult]) => {
+            accInner[name] = this.redecorateRpcFunction(rpcPromiseResult);
+            return accInner;
+          },
+          {} as any,
+        );
       return acc;
     }, {} as ApiPromise['rpc']);
   }
@@ -235,40 +238,39 @@ export class SubstrateApi implements ApiWrapper {
 
 export class SubstrateBlockWrapped implements SubstrateBlockWrapper {
   constructor(
-    private block: SubstrateBlock,
-    private extrinsics: SubstrateExtrinsic[],
-    private events: SubstrateEvent[],
+    private _block: SubstrateBlock,
+    private _extrinsics: SubstrateExtrinsic[],
+    private _events: SubstrateEvent[],
   ) {}
 
-  getBlock(): SubstrateBlock {
-    return this.block;
+  get block(): SubstrateBlock {
+    return this._block;
   }
 
-  getBlockHeight(): number {
-    return this.block.block.header.number.toNumber();
+  get blockHeight(): number {
+    return this._block.block.header.number.toNumber();
   }
 
-  getHash(): string {
+  get hash(): string {
     return this.block.block.header.hash.toHex();
   }
 
-  getEvents(): SubstrateEvent[] {
-    return this.events;
-  }
-
-  getVersion(): number {
+  get specVersion(): number {
     return this.block.specVersion;
   }
 
-  getCalls(filter?: SubqlCallFilter): SubstrateExtrinsic[] {
-    return SubstrateUtil.filterExtrinsics(this.extrinsics, filter);
+  calls(filter?: SubqlCallFilter | SubqlCallFilter[]): SubstrateExtrinsic[] {
+    return SubstrateUtil.filterExtrinsics(this._extrinsics, filter);
   }
 
+  events(filter?: SubqlEventFilter | SubqlEventFilter[]): SubstrateEvent[] {
+    return SubstrateUtil.filterEvents(this._events, filter);
+  }
   /****************************************************/
   /*           SUBSTRATE SPECIFIC METHODS             */
   /****************************************************/
 
-  getExtrinsincs(): SubstrateExtrinsic[] {
-    return this.extrinsics;
+  get extrinsics(): SubstrateExtrinsic[] {
+    return this._extrinsics;
   }
 }

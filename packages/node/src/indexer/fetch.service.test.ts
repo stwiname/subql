@@ -3,7 +3,12 @@
 
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ApiOptions } from '@polkadot/api/types';
-import { SubqlDatasourceKind, SubqlHandlerKind } from '@subql/types';
+import {
+  BlockWrapper,
+  SubqlDatasourceKind,
+  SubqlHandlerKind,
+  SubstrateBlock,
+} from '@subql/types';
 import { GraphQLSchema } from 'graphql';
 import { NodeConfig } from '../configure/NodeConfig';
 import { SubqueryProject } from '../configure/SubqueryProject';
@@ -82,7 +87,7 @@ describe('FetchService', () => {
     await fetchService.init();
     const loopPromise = fetchService.startLoop(1);
     // eslint-disable-next-line @typescript-eslint/require-await
-    fetchService.register(async (content) => {
+    fetchService.register(async (content: BlockWrapper<SubstrateBlock>) => {
       if (content.block.block.header.number.toNumber() === 10) {
         fetchService.onApplicationShutdown();
       }
@@ -109,7 +114,7 @@ describe('FetchService', () => {
     //29150
     const loopPromise = fetchService.startLoop(29230);
     // eslint-disable-next-line @typescript-eslint/require-await
-    fetchService.register(async (content) => {
+    fetchService.register(async (content: BlockWrapper<SubstrateBlock>) => {
       //29250
       if (content.block.block.header.number.toNumber() === 29240) {
         fetchService.onApplicationShutdown();
@@ -157,7 +162,7 @@ describe('FetchService', () => {
     await fetchService.init();
     const loopPromise = fetchService.startLoop(29230);
     // eslint-disable-next-line @typescript-eslint/require-await
-    fetchService.register(async (content) => {
+    fetchService.register(async (content: BlockWrapper<SubstrateBlock>) => {
       //29250
       if (content.block.block.header.number.toNumber() === 29240) {
         fetchService.onApplicationShutdown();
@@ -187,7 +192,7 @@ describe('FetchService', () => {
     await fetchService.init();
     const loopPromise = fetchService.startLoop(29230);
     // eslint-disable-next-line @typescript-eslint/require-await
-    fetchService.register(async (content) => {
+    fetchService.register(async (content: BlockWrapper<SubstrateBlock>) => {
       //29250
       if (content.block.block.header.number.toNumber() === 29240) {
         fetchService.onApplicationShutdown();
@@ -232,7 +237,7 @@ describe('FetchService', () => {
     await fetchService.init();
     const loopPromise = fetchService.startLoop(29230);
     // eslint-disable-next-line @typescript-eslint/require-await
-    fetchService.register(async (content) => {
+    fetchService.register(async (content: BlockWrapper<SubstrateBlock>) => {
       //29250
       if (content.block.block.header.number.toNumber() === 29240) {
         fetchService.onApplicationShutdown();
@@ -285,7 +290,7 @@ describe('FetchService', () => {
     await fetchService.init();
     const loopPromise = fetchService.startLoop(29230);
     // eslint-disable-next-line @typescript-eslint/require-await
-    fetchService.register(async (content) => {
+    fetchService.register(async (content: BlockWrapper<SubstrateBlock>) => {
       //29250
       if (content.block.block.header.number.toNumber() === 29240) {
         fetchService.onApplicationShutdown();
@@ -336,7 +341,7 @@ describe('FetchService', () => {
 
     const loopPromise = fetchService.startLoop(29230);
     // eslint-disable-next-line @typescript-eslint/require-await
-    fetchService.register(async (content) => {
+    fetchService.register(async (content: BlockWrapper<SubstrateBlock>) => {
       if (content.block.block.header.number.toNumber() === 29240) {
         fetchService.onApplicationShutdown();
       }

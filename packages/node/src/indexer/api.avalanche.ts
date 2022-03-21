@@ -5,17 +5,23 @@ import {
   ApiWrapper,
   AvalancheBlock,
   AvalancheEvent,
-  BlockWrapper,
   AvalancheBlockWrapper,
   AvalancheTransaction,
-  SubqlCallFilter,
+  AvalancheEventFilter,
+  AvalancheCallFilter,
 } from '@subql/types';
 import { Avalanche, BinTools } from 'avalanche';
 import { EVMAPI } from 'avalanche/dist/apis/evm';
 import { IndexAPI } from 'avalanche/dist/apis/index';
+import {
+  eventToTopic,
+  functionToSighash,
+  hexStringEq,
+  stringNormalizedEq,
+} from '../utils/string';
 import { AvalancheOptions } from './types';
 
-export class AvalancheApi implements ApiWrapper {
+export class AvalancheApi implements ApiWrapper<AvalancheBlockWrapper> {
   private client: Avalanche;
   private indexApi: IndexAPI;
   private genesisBlock: Record<string, any>;
@@ -89,7 +95,7 @@ export class AvalancheApi implements ApiWrapper {
     return lastHeight;
   }
 
-  async fetchBlocks(bufferBlocks: number[]): Promise<BlockWrapper[]> {
+  async fetchBlocks(bufferBlocks: number[]): Promise<AvalancheBlockWrapper[]> {
     return Promise.all(
       bufferBlocks.map(async (num) => {
         const block_promise = this.cchain.callMethod(
@@ -117,48 +123,85 @@ export class AvalancheApi implements ApiWrapper {
 }
 
 export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
-  constructor(private block: AvalancheBlock, private logs: AvalancheEvent[]) {}
+  constructor(
+    private _block: AvalancheBlock,
+    private _logs: AvalancheEvent[],
+  ) {}
 
-  getBlock(): AvalancheBlock {
-    return this.block;
+  get block(): AvalancheBlock {
+    return this._block;
   }
 
-  getBlockHeight(): number {
+  get blockHeight(): number {
     return parseInt(this.block.number);
   }
 
-  getHash(): string {
+  get hash(): string {
     return this.block.hash;
   }
 
-  getEvents(): AvalancheEvent[] {
-    return this.logs;
-  }
-
-  getVersion(): number {
-    return undefined; // TODO
-  }
-
-  getCalls(filter?: SubqlCallFilter): AvalancheTransaction[] {
+  calls(filter?: AvalancheCallFilter): AvalancheTransaction[] {
     if (!filter) {
       return this.block.transactions;
     }
-
     const transactions = this.block.transactions.filter((t) =>
-      this.filterProcessor(t, filter),
+      this.filterCallProcessor(t, filter),
     );
     return transactions;
   }
 
-  private filterProcessor(
+  events(filter?: AvalancheEventFilter): AvalancheEvent[] {
+    if (!filter) {
+      return this._logs;
+    }
+
+    return this._logs.filter((log) => this.filterEventsProcessor(log, filter));
+  }
+
+  private filterCallProcessor(
     transaction: AvalancheTransaction,
-    filter: SubqlCallFilter,
+    filter?: AvalancheCallFilter,
   ): boolean {
-    if (filter.to && filter.to !== transaction.to) {
+    if (!filter) {
+      return true;
+    }
+
+    if (filter.to && stringNormalizedEq(filter.to, transaction.to)) {
       return false;
     }
-    if (filter.from && filter.from !== transaction.from) {
+    if (filter.from && stringNormalizedEq(filter.from, transaction.from)) {
       return false;
+    }
+
+    if (
+      filter.function &&
+      transaction.input.indexOf(functionToSighash(filter.function)) !== 0
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private filterEventsProcessor(
+    log: AvalancheEvent,
+    filter?: AvalancheEventFilter,
+  ): boolean {
+    if (filter.address && !stringNormalizedEq(filter.address, log.address)) {
+      return false;
+    }
+
+    if (filter?.topics) {
+      for (let i = 0; i < Math.min(filter.topics.length, 4); i++) {
+        const topic = filter.topics[i];
+        if (!topic) {
+          continue;
+        }
+
+        if (!hexStringEq(eventToTopic(topic), log.topics[i])) {
+          return false;
+        }
+      }
     }
 
     return true;

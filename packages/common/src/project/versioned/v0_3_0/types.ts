@@ -39,6 +39,7 @@ export interface ProjectManifestV0_3_0 extends IProjectManifest {
     chaintypes?: {
       file: string;
     };
+    connectionChain?: string;
   };
 
   dataSources: (RuntimeDataSourceV0_3_0 | CustomDatasourceV0_3_0)[];

@@ -3,15 +3,15 @@
 
 import {
   AlgorandBlock,
+  AlgorandBlockWrapper,
+  AlgorandEvent,
+  AlgorandTransaction,
   ApiWrapper,
-  AvalancheEvent,
-  BlockWrapper,
-  SubstrateEvent,
 } from '@subql/types';
 import algosdk from 'algosdk';
 import { AlgorandOptions } from './types';
 
-export class AlgorandApi implements ApiWrapper {
+export class AlgorandApi implements ApiWrapper<AlgorandBlockWrapper> {
   private lastHeader: any;
   private client: algosdk.Algodv2;
 
@@ -54,7 +54,7 @@ export class AlgorandApi implements ApiWrapper {
     return lastHeight;
   }
 
-  async fetchBlocks(bufferBlocks: number[]): Promise<BlockWrapper[]> {
+  async fetchBlocks(bufferBlocks: number[]): Promise<AlgorandBlockWrapper[]> {
     return Promise.all(
       bufferBlocks.map(
         async (round) =>
@@ -64,23 +64,23 @@ export class AlgorandApi implements ApiWrapper {
   }
 }
 
-export class AlgorandBlockWrapped implements BlockWrapper {
-  constructor(private block: AlgorandBlock) {}
+export class AlgorandBlockWrapped implements AlgorandBlockWrapper {
+  constructor(private _block: AlgorandBlock) {}
 
-  getBlock(): AlgorandBlock {
-    return this.block;
+  get block(): AlgorandBlock {
+    return this._block;
   }
 
-  getBlockHeight(): number {
+  get blockHeight(): number {
     return this.block.rnd;
   }
 
-  getHash(): string {
+  get hash(): string {
     return this.block.prev.toString('hex'); // TODO
   }
 
-  getEvents(): SubstrateEvent[] | AvalancheEvent[] {
-    return []; // TODO
+  getEvents(): AlgorandEvent[] {
+    throw new Error('Not implemented'); // TODO
   }
 
   getVersion(): number {

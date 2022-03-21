@@ -197,7 +197,8 @@ describe('MoonbeamDs', () => {
       let log: SubstrateEvent;
 
       beforeAll(async () => {
-        const [{events}] = await fetchBlocks(api, 752073, 752073);
+        const [block] = await fetchBlocks(api, 752073, 752073);
+        const events = block.events();
 
         log = events[4];
       });
@@ -434,7 +435,8 @@ describe('MoonbeamDs', () => {
         // https://moonriver.subscan.io/block/717200
         // https://blockscout.moonriver.moonbeam.network/blocks/717200/transactions
         const blockNumber = 717200;
-        const [{events}] = await fetchBlocks(api, blockNumber, blockNumber);
+        const [block] = await fetchBlocks(api, blockNumber, blockNumber);
+        const events = block.events();
 
         const event = (await processor.transformer(events[4], baseDS, api, {erc20: erc20MiniAbi})) as MoonbeamEvent;
 
