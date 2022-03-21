@@ -46,15 +46,64 @@ export interface SubstrateEvent extends EventRecord {
 
 export type AlgorandBlock = Record<string, any>;
 
-export type AvalancheBlock = Record<string, any>;
+export type AvalancheBlock = {
+  difficulty: string;
+  extraData: string;
+  gasLimit: string;
+  gasUsed: string;
+  hash: string;
+  logsBloom: string;
+  miner: string;
+  mixHash: string;
+  nonce: string;
+  number: string;
+  parentHash: string;
+  receiptsRoot: string;
+  sha3Uncles: string;
+  size: string;
+  stateRoot: string;
+  timestamp: string;
+  totalDifficulty: string;
+  transactions: AvalancheTransaction[];
+  transactionsRoot: string;
+  uncles: string[];
+};
 
-export type AvalancheTransaction = Record<string, any>;
+export type AvalancheTransaction = {
+  blockHash: string;
+  blockNumber: string;
+  from: string;
+  gas: string;
+  gasPrice: string;
+  hash: string;
+  input: string;
+  nonce: string;
+  to: string;
+  transactionIndex: string;
+  value: string;
+  v: string;
+  r: string;
+  s: string;
+};
+
+export type AvalancheEvent = {
+  logIndex: string;
+  blockNumber: string;
+  blockHash: string;
+  transactionHash: string;
+  transactionIndex: string;
+  address: string;
+  data: string;
+  topics: string[];
+};
 
 export interface BlockWrapper {
   getBlock: () => SubstrateBlock | AlgorandBlock | AvalancheBlock;
   getBlockHeight: () => number;
   getHash: () => string;
   getCalls?: (filters?: SubqlCallFilter) => SubstrateExtrinsic[] | AvalancheTransaction[];
+  getEvents: () => SubstrateEvent[] | AvalancheEvent[];
+  getVersion: () => number;
 }
 
 export interface ApiWrapper {
@@ -74,7 +123,6 @@ export interface AvalancheBlockWrapper extends BlockWrapper {
 
 export interface SubstrateBlockWrapper extends BlockWrapper {
   getExtrinsincs: () => SubstrateExtrinsic[];
-  getEvents: () => SubstrateEvent[];
 }
 
 export type DynamicDatasourceCreator = (name: string, args: Record<string, unknown>) => Promise<void>;

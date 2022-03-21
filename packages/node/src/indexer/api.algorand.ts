@@ -1,7 +1,13 @@
 // Copyright 2020-2022 OnFinality Limited authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { AlgorandBlock, ApiWrapper, BlockWrapper } from '@subql/types';
+import {
+  AlgorandBlock,
+  ApiWrapper,
+  AvalancheEvent,
+  BlockWrapper,
+  SubstrateEvent,
+} from '@subql/types';
 import algosdk from 'algosdk';
 import { AlgorandOptions } from './types';
 
@@ -71,5 +77,13 @@ export class AlgorandBlockWrapped implements BlockWrapper {
 
   getHash(): string {
     return this.block.prev.toString('hex'); // TODO
+  }
+
+  getEvents(): SubstrateEvent[] | AvalancheEvent[] {
+    return []; // TODO
+  }
+
+  getVersion(): number {
+    return undefined; // TODO
   }
 }

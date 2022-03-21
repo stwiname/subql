@@ -4,6 +4,7 @@
 import {
   ApiWrapper,
   AvalancheBlock,
+  AvalancheEvent,
   BlockWrapper,
   AvalancheBlockWrapper,
   AvalancheTransaction,
@@ -90,24 +91,33 @@ export class AvalancheApi implements ApiWrapper {
 
   async fetchBlocks(bufferBlocks: number[]): Promise<BlockWrapper[]> {
     return Promise.all(
-      bufferBlocks.map(
-        async (num) =>
-          new AvalancheBlockWrapped(
-            (
-              await this.cchain.callMethod(
-                'eth_getBlockByNumber',
-                [`0x${num.toString(16)}`, true],
-                '/ext/bc/C/rpc',
-              )
-            ).data.result,
-          ),
-      ),
+      bufferBlocks.map(async (num) => {
+        const block_promise = this.cchain.callMethod(
+          'eth_getBlockByNumber',
+          [`0x${num.toString(16)}`, true],
+          '/ext/bc/C/rpc',
+        );
+        const logs_promise = this.cchain.callMethod(
+          'eth_getLogs',
+          [
+            {
+              fromBlock: `0x${num.toString(16)}`,
+              toBlock: `0x${num.toString(16)}`,
+            },
+          ],
+          '/ext/bc/C/rpc',
+        );
+        return new AvalancheBlockWrapped(
+          (await block_promise).data.result,
+          (await logs_promise).data.result,
+        );
+      }),
     );
   }
 }
 
 export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
-  constructor(private block: AvalancheBlock) {}
+  constructor(private block: AvalancheBlock, private logs: AvalancheEvent[]) {}
 
   getBlock(): AvalancheBlock {
     return this.block;
@@ -121,7 +131,19 @@ export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
     return this.block.hash;
   }
 
+  getEvents(): AvalancheEvent[] {
+    return this.logs;
+  }
+
+  getVersion(): number {
+    return undefined; // TODO
+  }
+
   getCalls(filter?: SubqlCallFilter): AvalancheTransaction[] {
+    if (!filter) {
+      return this.block.transactions;
+    }
+
     const transactions = this.block.transactions.filter((t) =>
       this.filterProcessor(t, filter),
     );
@@ -130,19 +152,15 @@ export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
 
   private filterProcessor(
     transaction: AvalancheTransaction,
-    filter?: SubqlCallFilter,
+    filter: SubqlCallFilter,
   ): boolean {
-    const { from, to } = transaction;
-    if (
-      filter?.from &&
-      from &&
-      filter.from.toLowerCase() !== from?.toLowerCase()
-    ) {
+    if (filter.to && filter.to !== transaction.to) {
       return false;
     }
-    if (filter?.to && to && filter.to.toLowerCase() !== to.toLowerCase()) {
+    if (filter.from && filter.from !== transaction.from) {
       return false;
     }
+
     return true;
   }
 
