@@ -14,9 +14,7 @@ import { EVMAPI } from 'avalanche/dist/apis/evm';
 import { IndexAPI } from 'avalanche/dist/apis/index';
 import { AvalancheOptions } from './types';
 
-export class AvalancheApi
-  implements ApiWrapper<AvalancheBlock, AvalancheTransaction, AvalancheEvent>
-{
+export class AvalancheApi implements ApiWrapper<AvalancheBlockWrapper> {
   private client: Avalanche;
   private indexApi: IndexAPI;
   private genesisBlock: Record<string, any>;
@@ -140,12 +138,12 @@ export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
       return this.block.transactions;
     }
     const transactions = this.block.transactions.filter((t) =>
-      this.filterProcessor(t, filter),
+      this.filterCallProcessor(t, filter),
     );
     return transactions;
   }
 
-  private filterProcessor(
+  private filterCallProcessor(
     transaction: AvalancheTransaction,
     filter: SubqlCallFilter,
   ): boolean {

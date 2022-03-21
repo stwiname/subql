@@ -11,9 +11,7 @@ import {
 import algosdk from 'algosdk';
 import { AlgorandOptions } from './types';
 
-export class AlgorandApi
-  implements ApiWrapper<AlgorandBlock, AlgorandTransaction, AlgorandEvent>
-{
+export class AlgorandApi implements ApiWrapper<AlgorandBlockWrapper> {
   private lastHeader: any;
   private client: algosdk.Algodv2;
 

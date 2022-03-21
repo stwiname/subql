@@ -20,7 +20,6 @@ import { ProjectNetworkConfig } from '@subql/common';
 import {
   SubstrateBlock,
   ApiWrapper,
-  BlockWrapper,
   SubstrateBlockWrapper,
   SubstrateExtrinsic,
   SubstrateEvent,
@@ -36,9 +35,7 @@ const NOT_SUPPORT = (name: string) => () => {
   throw new Error(`${name}() is not supported`);
 };
 
-export class SubstrateApi
-  implements ApiWrapper<SubstrateBlock, SubstrateExtrinsic, SubstrateEvent>
-{
+export class SubstrateApi implements ApiWrapper<SubstrateBlockWrapper> {
   private client: ApiPromise;
   private currentBlockHash: string;
   private currentBlockNumber: number;

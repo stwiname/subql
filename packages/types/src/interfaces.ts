@@ -3,6 +3,7 @@
 
 import {Extrinsic, EventRecord, SignedBlock} from '@polkadot/types/interfaces';
 import {SubqlCallFilter} from './project';
+import {SubqlEventFilter} from '.';
 
 export interface Entity {
   id: string;
@@ -116,12 +117,7 @@ export interface BlockWrapper<
 }
 
 export interface ApiWrapper<
-  B extends SubstrateBlock | AlgorandBlock | AvalancheBlock = SubstrateBlock | AlgorandBlock | AvalancheBlock,
-  C extends SubstrateExtrinsic | AvalancheTransaction | AlgorandTransaction =
-    | SubstrateExtrinsic
-    | AvalancheTransaction
-    | AlgorandTransaction,
-  E extends SubstrateEvent | AvalancheEvent | AlgorandEvent = SubstrateEvent | AvalancheEvent | AlgorandEvent
+  BW extends BlockWrapper = SubstrateBlockWrapper | AvalancheBlockWrapper | AlgorandBlockWrapper
 > {
   init: () => Promise<void>;
   getGenesisHash: () => string;
@@ -129,7 +125,7 @@ export interface ApiWrapper<
   getSpecName: () => string;
   getFinalizedBlockHeight: () => Promise<number>;
   getLastHeight: () => Promise<number>;
-  fetchBlocks: (bufferBlocks: number[]) => Promise<BlockWrapper<B, C, E>[]>;
+  fetchBlocks: (bufferBlocks: number[]) => Promise<BW[]>;
 }
 
 export interface AvalancheBlockWrapper extends BlockWrapper<AvalancheBlock, AvalancheTransaction, AvalancheEvent> {
