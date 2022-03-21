@@ -222,7 +222,6 @@ export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
             }
           }
         }
-        console.log(true);
         return true;
       }),
     );
