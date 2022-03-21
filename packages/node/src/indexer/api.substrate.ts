@@ -24,6 +24,7 @@ import {
   SubstrateExtrinsic,
   SubstrateEvent,
   SubqlCallFilter,
+  SubqlEventFilter,
 } from '@subql/types';
 import { profiler, profilerWrap } from '../utils/profiler';
 import * as SubstrateUtil from '../utils/substrate';
@@ -258,19 +259,18 @@ export class SubstrateBlockWrapped implements SubstrateBlockWrapper {
     return this.block.specVersion;
   }
 
-  calls(filter?: SubqlCallFilter): SubstrateExtrinsic[] {
+  calls(filter?: SubqlCallFilter | SubqlCallFilter[]): SubstrateExtrinsic[] {
     return SubstrateUtil.filterExtrinsics(this._extrinsics, filter);
   }
 
+  events(filter?: SubqlEventFilter | SubqlEventFilter[]): SubstrateEvent[] {
+    return SubstrateUtil.filterEvents(this._events, filter);
+  }
   /****************************************************/
   /*           SUBSTRATE SPECIFIC METHODS             */
   /****************************************************/
 
   get extrinsics(): SubstrateExtrinsic[] {
     return this._extrinsics;
-  }
-
-  get events(): SubstrateEvent[] {
-    return this._events;
   }
 }

@@ -24,6 +24,8 @@ import {
   SubqlRuntimeHandler,
   ApiWrapper,
   BlockWrapper,
+  SubstrateBlockWrapper,
+  SubstrateExtrinsic,
 } from '@subql/types';
 import { QueryTypes, Sequelize, Transaction } from 'sequelize';
 import { NodeConfig } from '../configure/NodeConfig';
@@ -465,10 +467,7 @@ export class IndexerManager {
           break;
         }
         case SubqlHandlerKind.Event: {
-          const filteredEvents = SubstrateUtil.filterEvents(
-            (blockContent as SubstrateBlockWrapped).events,
-            handler.filter,
-          );
+          const filteredEvents = blockContent.events(handler.filter);
           for (const e of filteredEvents) {
             await vm.securedExec(handler.handler, [e]);
           }
@@ -487,8 +486,6 @@ export class IndexerManager {
     if (this.project.network.type === 'substrate') {
       const substrateBlockContent = blockContent as SubstrateBlockWrapped;
       const block = substrateBlockContent.block;
-      const extrinsics = substrateBlockContent.extrinsics;
-      const events = substrateBlockContent.events;
       const plugin = this.dsProcessorService.getDsProcessor(ds);
       const assets = await this.dsProcessorService.getAssets(ds);
 
@@ -518,14 +515,12 @@ export class IndexerManager {
         if (isBlockHandlerProcessor(processor)) {
           await processData(processor, handler, [block]);
         } else if (isCallHandlerProcessor(processor)) {
-          const filteredExtrinsics = SubstrateUtil.filterExtrinsics(
-            extrinsics,
+          const filteredExtrinsics = substrateBlockContent.calls(
             processor.baseFilter,
           );
           await processData(processor, handler, filteredExtrinsics);
         } else if (isEventHandlerProcessor(processor)) {
-          const filteredEvents = SubstrateUtil.filterEvents(
-            events,
+          const filteredEvents = substrateBlockContent.events(
             processor.baseFilter,
           );
           await processData(processor, handler, filteredEvents);

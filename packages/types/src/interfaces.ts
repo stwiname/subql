@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {Extrinsic, EventRecord, SignedBlock} from '@polkadot/types/interfaces';
-import {SubqlCallFilter} from './project';
-import {SubqlEventFilter} from '.';
+import {SubqlCallFilter, SubqlEventFilter} from './project';
 
 export interface Entity {
   id: string;
@@ -43,6 +42,17 @@ export interface SubstrateEvent extends EventRecord {
   idx: number;
   extrinsic?: SubstrateExtrinsic;
   block: SubstrateBlock;
+}
+
+export interface AvalancheCallFilter {
+  from?: string;
+  to?: string;
+  function?: string;
+}
+
+export interface AvalancheEventFilter {
+  address?: string;
+  topics?: Array<string | null | undefined>;
 }
 
 export type AlgorandBlock = Record<string, any>;
@@ -106,14 +116,16 @@ export interface BlockWrapper<
     | SubstrateExtrinsic
     | AlgorandTransaction
     | AvalancheTransaction,
-  E extends SubstrateEvent | AlgorandEvent | AvalancheEvent = SubstrateEvent | AlgorandEvent | AvalancheEvent
+  E extends SubstrateEvent | AlgorandEvent | AvalancheEvent = SubstrateEvent | AlgorandEvent | AvalancheEvent,
+  CF extends SubqlCallFilter | AvalancheCallFilter = SubqlCallFilter | AvalancheCallFilter,
+  EF extends SubqlEventFilter | AvalancheEventFilter = SubqlEventFilter | AvalancheEventFilter
 > {
   block: B;
   blockHeight: number;
   specVersion?: number;
   hash: string;
-  calls?: (filters?: SubqlCallFilter) => C[];
-  events?: E[];
+  calls?: (filters?: CF | CF[]) => C[];
+  events?: (filters?: EF | EF[]) => E[];
 }
 
 export interface ApiWrapper<
@@ -128,7 +140,14 @@ export interface ApiWrapper<
   fetchBlocks: (bufferBlocks: number[]) => Promise<BW[]>;
 }
 
-export interface AvalancheBlockWrapper extends BlockWrapper<AvalancheBlock, AvalancheTransaction, AvalancheEvent> {
+export interface AvalancheBlockWrapper
+  extends BlockWrapper<
+    AvalancheBlock,
+    AvalancheTransaction,
+    AvalancheEvent,
+    AvalancheCallFilter,
+    AvalancheEventFilter
+  > {
   get: (objects: string[]) => Record<string, any>;
   getTransactions: (filters?: string[]) => Record<string, any>;
 }
