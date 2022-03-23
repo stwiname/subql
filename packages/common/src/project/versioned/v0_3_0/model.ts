@@ -14,7 +14,13 @@ import yaml from 'js-yaml';
 import {FileType} from '..';
 import {CustomDataSourceBase, Mapping, RuntimeDataSourceBase} from '../../models';
 import {ProjectManifestBaseImpl} from '../base';
-import {CustomDatasourceV0_3_0, ProjectManifestV0_3_0, RuntimeDataSourceV0_3_0, SubqlMappingV0_3_0} from './types';
+import {
+  CustomDatasourceV0_3_0,
+  IRuntimeDataSourceOptions,
+  ProjectManifestV0_3_0,
+  RuntimeDataSourceV0_3_0,
+  SubqlMappingV0_3_0,
+} from './types';
 
 export class ProjectNetworkDeploymentV0_3_0 {
   @IsString()
@@ -48,6 +54,16 @@ function validateObject(object: any, errorMessage = 'failed to validate object.'
   }
 }
 
+export class RuntimeDataSourceOptions implements IRuntimeDataSourceOptions {
+  @IsString()
+  @IsOptional()
+  abi?: string;
+
+  @IsString()
+  @IsOptional()
+  address?: string;
+}
+
 export class RuntimeDataSourceV0_3_0Impl
   extends RuntimeDataSourceBase<SubqlMappingV0_3_0<SubqlRuntimeHandler>>
   implements RuntimeDataSourceV0_3_0
@@ -55,6 +71,15 @@ export class RuntimeDataSourceV0_3_0Impl
   @Type(() => ProjectMappingV0_3_0)
   @ValidateNested()
   mapping: SubqlMappingV0_3_0<SubqlRuntimeHandler>;
+
+  @Type(() => RuntimeDataSourceOptions)
+  @IsOptional()
+  options?: RuntimeDataSourceOptions;
+
+  @Type(() => FileType)
+  @IsOptional()
+  @ValidateNested({each: true})
+  assets?: Map<string, FileType>;
 
   validate(): void {
     return validateObject(this, 'failed to validate runtime datasource.');

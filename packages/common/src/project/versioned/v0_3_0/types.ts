@@ -18,7 +18,17 @@ export interface SubqlMappingV0_3_0<T extends SubqlHandler> extends SubqlMapping
   file: string;
 }
 
-export type RuntimeDataSourceV0_3_0 = SubqlRuntimeDatasource<SubqlMappingV0_3_0<SubqlRuntimeHandler>>;
+export interface IRuntimeDataSourceOptions {
+  abi?: string;
+  address?: string;
+}
+
+export interface RuntimeDataSourceV0_3_0 extends SubqlRuntimeDatasource<SubqlMappingV0_3_0<SubqlRuntimeHandler>> {
+  assets?: Map<string, {file: string}>;
+
+  options?: IRuntimeDataSourceOptions;
+}
+
 export type CustomDatasourceV0_3_0 = SubqlCustomDatasource<
   string,
   SubqlNetworkFilter,
