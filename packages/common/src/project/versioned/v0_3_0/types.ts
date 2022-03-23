@@ -13,6 +13,7 @@ import {
   SubqlRuntimeHandler,
 } from '@subql/types';
 import {IProjectManifest} from '../../types';
+import {isRuntimeDs} from '../../utils';
 
 export interface SubqlMappingV0_3_0<T extends SubqlHandler> extends SubqlMapping<T> {
   file: string;
@@ -56,5 +57,5 @@ export interface ProjectManifestV0_3_0 extends IProjectManifest {
 }
 
 export function isRuntimeDataSourceV0_3_0(dataSource: SubqlDatasource): dataSource is RuntimeDataSourceV0_3_0 {
-  return dataSource.kind === SubqlDatasourceKind.Runtime && !!(dataSource as RuntimeDataSourceV0_3_0).mapping.file;
+  return isRuntimeDs(dataSource) && !!(dataSource as RuntimeDataSourceV0_3_0).mapping.file;
 }

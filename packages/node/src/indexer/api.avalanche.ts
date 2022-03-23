@@ -263,10 +263,9 @@ export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
       address = ds?.options?.address;
     }
 
-    const transactions = this.block.transactions.filter((t) =>
+    return this.block.transactions.filter((t) =>
       this.filterCallProcessor(t, filter, address),
     );
-    return transactions;
   }
 
   events(
@@ -299,11 +298,7 @@ export class AvalancheBlockWrapped implements AvalancheBlockWrapper {
       return false;
     }
 
-    if (
-      address &&
-      !filter.from &&
-      !stringNormalizedEq(address, transaction.from)
-    ) {
+    if (address && !filter.to && !stringNormalizedEq(address, transaction.to)) {
       return false;
     }
 
