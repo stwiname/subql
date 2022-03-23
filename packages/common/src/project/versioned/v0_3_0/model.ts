@@ -111,7 +111,10 @@ export class DeploymentV0_3_0 {
   @Type(() => CustomDataSourceV0_3_0Impl, {
     discriminator: {
       property: 'kind',
-      subTypes: [{value: RuntimeDataSourceV0_3_0Impl, name: 'substrate/Runtime'}],
+      subTypes: [
+        {value: RuntimeDataSourceV0_3_0Impl, name: 'substrate/Runtime'},
+        {value: RuntimeDataSourceV0_3_0Impl, name: 'avalanche/Runtime'},
+      ],
     },
     keepDiscriminatorProperty: true,
   })
